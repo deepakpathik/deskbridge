@@ -8,6 +8,7 @@ import { MobileLiveSessionScreen } from './features/session/MobileLiveSessionScr
 import { MobileSettingsScreen } from './features/settings/MobileSettingsScreen';
 import { useIsMobile } from './hooks/useIsMobile';
 import { useAppStore } from './store/useAppStore';
+import { useSettingsStore } from './store/useSettingsStore';
 
 import backgroundImage from './assets/background_image.jpeg';
 
@@ -35,7 +36,26 @@ declare global {
 export default function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { status, setStatus, disconnect, initializeSocket, approveConnection, denyConnection, remoteDeviceId } = useAppStore();
+  const { theme } = useSettingsStore();
   const isMobile = useIsMobile();
+
+  useEffect(() => {
+    // Apply theme
+    document.documentElement.className = theme; // Assuming "dark" / "light" classes
+    if (theme === 'auto') {
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      document.documentElement.className = prefersDark ? 'dark' : 'light';
+    }
+  }, [theme]);
+
+  // Suppress notifications in UI if setting is disabled
+  // Note: We might want to filter this in the store itself, but doing it here hides it from view.
+  // The 'notification' in store is textual.
+  // If we really want to stop "Desktop Notifications" (system notifications), we'd need the Notification API.
+  // But here it seems 'notifications' tab controls "Desktop Notifications" but also refers to connection events.
+  // Assuming the intent is for the in-app "Notifications" or System ones. 
+  // Given the "notifications" tab in settings lists "Connection established" etc, and "Desktop Notifications",
+  // let's assume "showNotifications" controls the in-app pill visibility mostly.
 
   useEffect(() => {
     initializeSocket();
@@ -45,10 +65,6 @@ export default function App() {
       if (window.electronAPI) {
         const perms = await window.electronAPI.checkPermissions();
         console.log('OS Permissions:', perms);
-
-        // If screen recording is needed (AnyDesk clone), we might want to warn if not granted.
-        // On macOS, we can't force-prompt for screen easily without trying to capture.
-        // But we can prompt for mic/camera if we used audio.
       }
     };
     checkPermissions();

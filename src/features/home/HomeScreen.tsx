@@ -11,6 +11,7 @@ import {
   Wifi
 } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
+import { useSettingsStore } from '../../store/useSettingsStore';
 import navbarLogo from '../../assets/navbar_logo.png';
 
 interface HomeScreenProps {
@@ -31,6 +32,7 @@ export function HomeScreen({ onOpenSettings }: HomeScreenProps) {
 
   const [copied, setCopied] = useState(false);
   const [deviceIdInput, setDeviceIdInput] = useState('');
+  const { showNotifications } = useSettingsStore();
 
   // ... (rest of the component)
 
@@ -261,7 +263,7 @@ export function HomeScreen({ onOpenSettings }: HomeScreenProps) {
             </div>
 
             {/* Notifications/Errors Popup - Below Recent Sessions */}
-            {(notification || error) && (
+            {(showNotifications && notification || error) && (
               <div className="mt-4 w-full flex justify-center animate-in fade-in slide-in-from-top-4 duration-300">
                 <div className={`w-full max-w-md p-4 rounded-xl shadow-2xl border backdrop-blur-xl flex items-center justify-center gap-3 ${error
                   ? 'bg-red-500/10 border-red-500/30 text-red-200'

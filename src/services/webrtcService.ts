@@ -1,3 +1,5 @@
+import { useSettingsStore } from '../store/useSettingsStore';
+
 export class WebRTCService {
     private onIceCandidateCallback: ((candidate: RTCIceCandidate) => void) | null = null;
     private onTrackCallback: ((stream: MediaStream) => void) | null = null;
@@ -10,11 +12,20 @@ export class WebRTCService {
      */
     public async startScreenShare(): Promise<MediaStream> {
         try {
+            const { resolution, fps } = useSettingsStore.getState();
+
+            // Parse resolution (e.g., "1920x1080")
+            const [width, height] = resolution.split('x').map(Number);
+            const frameRate = Number(fps);
+
             const stream = await navigator.mediaDevices.getDisplayMedia({
                 video: {
                     cursor: 'always',
+                    width: width ? { ideal: width } : undefined,
+                    height: height ? { ideal: height } : undefined,
+                    frameRate: frameRate ? { ideal: frameRate } : undefined,
                 },
-                audio: false // System audio capture support varies by OS
+                audio: false
             } as any);
 
             this.localStream = stream;

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   X,
   Monitor,
@@ -9,26 +9,32 @@ import {
   Save,
   RotateCcw,
   ChevronRight,
-  Shield
+  Shield,
+  Key
 } from 'lucide-react';
 import navbarLogo from '../../assets/navbar_logo.png';
 import { useAppStore } from '../../store/useAppStore';
+import { useSettingsStore } from '../../store/useSettingsStore';
 
 interface SettingsScreenProps {
   onClose: () => void;
 }
 
-type SettingsTab = 'streaming' | 'security' | 'appearance' | 'notifications';
+type SettingsTab = 'streaming' | 'security' | 'appearance' | 'notifications' | 'permissions';
 
 export function SettingsScreen({ onClose }: SettingsScreenProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>('streaming');
-  const [resolution, setResolution] = useState('1920x1080');
-  const [fps, setFps] = useState('60');
-  const [codec, setCodec] = useState('H.264');
-  const [bitrate, setBitrate] = useState('8');
-  const [theme, setTheme] = useState('dark');
-  const [requirePassword, setRequirePassword] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(true);
+
+  const {
+    resolution, setResolution,
+    fps, setFps,
+    codec, setCodec,
+    bitrate, setBitrate,
+    theme, setTheme,
+    requirePassword, setRequirePassword,
+    showNotifications, setShowNotifications,
+    resetSettings
+  } = useSettingsStore();
 
   const { status, isSocketConnected } = useAppStore();
 
@@ -56,10 +62,61 @@ export function SettingsScreen({ onClose }: SettingsScreenProps) {
 
   const tabs = [
     { id: 'streaming' as const, label: 'Streaming Quality', icon: Video, color: 'from-blue-500 to-cyan-500' },
+    { id: 'permissions' as const, label: 'Permissions', icon: Key, color: 'from-red-500 to-orange-500' },
     { id: 'security' as const, label: 'Security & Privacy', icon: Lock, color: 'from-purple-500 to-pink-500' },
     { id: 'appearance' as const, label: 'Appearance', icon: Palette, color: 'from-orange-500 to-amber-500' },
     { id: 'notifications' as const, label: 'Notifications', icon: Bell, color: 'from-emerald-500 to-green-500' },
   ];
+
+  const [permissions, setPermissions] = useState({
+    screen: 'unknown',
+    mic: 'unknown',
+    camera: 'unknown',
+    accessibility: 'unknown'
+  });
+
+  const checkPermissions = async () => {
+    if ((window as any).electronAPI) {
+      const perms = await (window as any).electronAPI.checkPermissions();
+      setPermissions(perms);
+    }
+  };
+
+  useEffect(() => {
+    checkPermissions();
+    const interval = setInterval(checkPermissions, 2000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleRequestPermission = async (type: 'screen' | 'mic' | 'camera' | 'accessibility') => {
+    if (!(window as any).electronAPI) return;
+
+    if (type === 'mic' || type === 'camera') {
+      await (window as any).electronAPI.requestMediaAccess(type === 'mic' ? 'microphone' : 'camera');
+    } else {
+      await (window as any).electronAPI.openSecurityPreferences(type);
+    }
+    await checkPermissions();
+  };
+
+  const getPermissionStatusColor = (status: string) => {
+    switch (status) {
+      case 'granted': return 'text-emerald-400';
+      case 'denied': return 'text-red-400';
+      case 'restricted': return 'text-orange-400';
+      default: return 'text-gray-400';
+    }
+  };
+
+  const getPermissionStatusText = (status: string) => {
+    switch (status) {
+      case 'granted': return 'Allowed';
+      case 'denied': return 'Denied';
+      case 'restricted': return 'Restricted';
+      case 'not-determined': return 'Not Determined';
+      default: return 'Unknown';
+    }
+  };
 
   return (
     <div className="w-full h-full flex flex-col">
@@ -268,6 +325,77 @@ export function SettingsScreen({ onClose }: SettingsScreenProps) {
               </div>
             )}
 
+            {activeTab === 'permissions' && (
+              <div className="space-y-6">
+                <div className="mb-8">
+                  <h2 className="text-3xl font-bold mb-2 bg-gradient-to-r from-red-400 to-orange-400 bg-clip-text text-transparent">
+                    System Permissions
+                  </h2>
+                  <p className="text-sm text-gray-400">
+                    Manage system permissions required for DeskBridge to function correctly
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4">
+                  {[
+                    {
+                      id: 'screen' as const,
+                      title: 'Screen Recording',
+                      desc: 'Required to capture and stream your screen content',
+                      icon: Monitor
+                    },
+                    {
+                      id: 'accessibility' as const,
+                      title: 'Accessibility',
+                      desc: 'Required for remote input control (keyboard/mouse)',
+                      icon: RotateCcw // Using RotateCcw as placeholder for Accessibility if not available, or Monitor
+                    },
+                    {
+                      id: 'mic' as const,
+                      title: 'Microphone',
+                      desc: 'Required for voice chat',
+                      icon: Video // Using Video/Mic equiv
+                    },
+                    {
+                      id: 'camera' as const,
+                      title: 'Camera',
+                      desc: 'Required for video chat',
+                      icon: Video
+                    }
+                  ].map(perm => (
+                    <div key={perm.id} className="backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/[0.03] rounded-2xl p-6 border border-white/20 shadow-xl flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
+                          <perm.icon className="w-6 h-6 text-gray-300" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-lg">{perm.title}</h3>
+                          <p className="text-sm text-gray-400">{perm.desc}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-6">
+                        <span className={`text-sm font-semibold uppercase tracking-wider ${getPermissionStatusColor(permissions[perm.id])}`}>
+                          {getPermissionStatusText(permissions[perm.id])}
+                        </span>
+
+                        <button
+                          onClick={() => handleRequestPermission(perm.id)}
+                          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${permissions[perm.id] === 'granted'
+                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 cursor-default'
+                            : 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20'
+                            }`}
+                          disabled={permissions[perm.id] === 'granted'}
+                        >
+                          {permissions[perm.id] === 'granted' ? 'Granted' : 'Request Access'}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {activeTab === 'security' && (
               <div className="space-y-6">
                 <div className="mb-8">
@@ -371,7 +499,7 @@ export function SettingsScreen({ onClose }: SettingsScreenProps) {
                         onClick={() => setTheme(themeOption.id)}
                         className={`p-5 rounded-2xl border-2 transition-all duration-200 ${theme === themeOption.id
                           ? 'border-blue-500 bg-blue-500/10 scale-105 shadow-lg shadow-blue-500/20'
-                          : 'border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10'
+                          : 'border-white/10 bg-white/5 hover:border-white/20 hover:border-white/20 hover:bg-white/10'
                           }`}
                       >
                         <div className={`w-full h-20 rounded-xl mb-3 ${themeOption.preview} shadow-inner`}></div>
@@ -475,7 +603,9 @@ export function SettingsScreen({ onClose }: SettingsScreenProps) {
                 Save Changes
               </button>
 
-              <button className="px-8 py-4 rounded-xl backdrop-blur-xl bg-white/5 hover:bg-white/10 transition-all font-semibold flex items-center gap-2 border-2 border-white/30 hover:border-white/40 hover:scale-105 duration-200">
+              <button
+                onClick={resetSettings}
+                className="px-8 py-4 rounded-xl backdrop-blur-xl bg-white/5 hover:bg-white/10 transition-all font-semibold flex items-center gap-2 border-2 border-white/30 hover:border-white/40 hover:scale-105 duration-200">
                 <RotateCcw className="w-5 h-5" />
                 Reset to Default
               </button>
@@ -487,3 +617,6 @@ export function SettingsScreen({ onClose }: SettingsScreenProps) {
 
   );
 }
+
+
+
