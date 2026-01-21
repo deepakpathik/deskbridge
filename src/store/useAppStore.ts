@@ -41,14 +41,8 @@ export const useAppStore = create<AppStore>((set) => ({
 
     connectToDevice: (targetId) => {
         set({ status: 'CONNECTING', remoteDeviceId: targetId });
-        // Simulation for now - will be replaced by real socket logic later
-        setTimeout(() => {
-            set({ status: 'CONNECTED' });
-            // Auto transition to session for now to test nav, removed in later steps
-            setTimeout(() => {
-                set({ status: 'IN_SESSION' });
-            }, 1000);
-        }, 1500);
+        socketService.joinRoom(targetId);
+        // We will move the status update to 'CONNECTED'/'IN_SESSION' to the event listener in Step 15
     },
 
     disconnect: () => set({ status: 'IDLE', remoteDeviceId: null }),
