@@ -83,6 +83,28 @@ export class WebRTCService {
         return offer;
     }
 
+    public async handleOffer(offer: RTCSessionDescriptionInit): Promise<RTCSessionDescriptionInit> {
+        if (!this.peerConnection) {
+            this.createPeerConnection();
+        }
+
+        if (!this.peerConnection) {
+            throw new Error('PeerConnection not initialized');
+        }
+
+        await this.peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+        const answer = await this.peerConnection.createAnswer();
+        await this.peerConnection.setLocalDescription(answer);
+        return answer;
+    }
+
+    public async handleAnswer(answer: RTCSessionDescriptionInit): Promise<void> {
+        if (!this.peerConnection) {
+            throw new Error('PeerConnection not initialized');
+        }
+        await this.peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+    }
+
     public getLocalStream(): MediaStream | null {
         return this.localStream;
     }
