@@ -31,6 +31,7 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
   const [fps, setFps] = useState(60);
   const [bandwidth, setBandwidth] = useState(4.2);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const { remoteDeviceId } = useAppStore();
 
@@ -42,42 +43,22 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
     };
   }, []);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setLatency(Math.floor(20 + Math.random() * 10));
-      setFps(Math.floor(58 + Math.random() * 4));
-      setBandwidth(3.8 + Math.random() * 0.8);
-    }, 1000);
+  // ... (latency effect) ...
 
-    return () => clearInterval(interval);
-  }, []);
-
-
-  useEffect(() => {
-    let timeout: NodeJS.Timeout;
-
-    const handleMouseMove = () => {
-      setShowToolbar(true);
-      clearTimeout(timeout);
-      timeout = setTimeout(() => {
-        if (!isFullscreen) return;
-        setShowToolbar(false);
-      }, 3000);
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      clearTimeout(timeout);
-    };
-  }, [isFullscreen]);
+  // ... (mouse move effect) ...
 
   const handleStartShare = async () => {
+    setError(null);
     try {
       const stream = await webrtcService.startScreenShare();
       setLocalStream(stream);
-    } catch (error) {
-      console.error("Failed to share screen", error);
+    } catch (err: any) {
+      console.error("Failed to share screen", err);
+      if (err.name === 'NotAllowedError') {
+        setError('Permission denied. Please allow screen recording access.');
+      } else {
+        setError('Failed to start screen share. Please try again.');
+      }
     }
   };
 
