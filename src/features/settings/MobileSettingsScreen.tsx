@@ -9,10 +9,9 @@ import {
     Save,
     ChevronRight,
     Sparkles,
-    Shield,
-    Activity,
-    Wifi
+    Shield
 } from 'lucide-react';
+import { useAppStore } from '../../store/useAppStore';
 
 interface MobileSettingsScreenProps {
     onClose: () => void;
@@ -29,6 +28,34 @@ export function MobileSettingsScreen({ onClose }: MobileSettingsScreenProps) {
     const [theme, setTheme] = useState('dark');
     const [requirePassword, setRequirePassword] = useState(false);
     const [showNotifications, setShowNotifications] = useState(true);
+
+    const { status, isSocketConnected } = useAppStore();
+
+    const getStatusColor = () => {
+        switch (status) {
+            case 'IDLE':
+                return isSocketConnected ? '#10b981' : '#ef4444';
+            case 'CONNECTING':
+                return '#f59e0b';
+            case 'CONNECTED':
+                return '#3b82f6';
+            default:
+                return '#ef4444';
+        }
+    };
+
+    const getStatusText = () => {
+        switch (status) {
+            case 'IDLE':
+                return isSocketConnected ? 'Online' : 'Offline';
+            case 'CONNECTING':
+                return 'Connecting...';
+            case 'CONNECTED':
+                return 'Connected';
+            default:
+                return 'Offline';
+        }
+    };
 
     const menuItems = [
         { id: 'streaming' as const, label: 'Streaming Quality', icon: Video, color: 'from-blue-500 to-cyan-500' },
@@ -54,12 +81,24 @@ export function MobileSettingsScreen({ onClose }: MobileSettingsScreenProps) {
                         </div>
                     </div>
 
-                    <button
-                        onClick={onClose}
-                        className="p-2 rounded-lg hover:bg-white/10 transition-all backdrop-blur-xl bg-white/[0.03] border border-white/10"
-                    >
-                        <X className="w-5 h-5" />
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.05] backdrop-blur-xl border border-white/20">
+                            <div
+                                className="w-2.5 h-2.5 shrink-0 rounded-full border border-white/20 animate-pulse transition-colors duration-300"
+                                style={{
+                                    backgroundColor: getStatusColor(),
+                                    boxShadow: `0 0 8px ${getStatusColor()}`
+                                }}
+                            />
+                            <span className="text-xs font-medium">{getStatusText()}</span>
+                        </div>
+                        <button
+                            onClick={onClose}
+                            className="p-2 rounded-lg hover:bg-white/10 transition-all backdrop-blur-xl bg-white/[0.03] border border-white/10"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
                 </header>
 
                 <div className="flex-1 overflow-auto px-5 py-6">

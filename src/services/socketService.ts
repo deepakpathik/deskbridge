@@ -5,7 +5,7 @@ const SOCKET_URL = 'http://localhost:5001';
 class SocketService {
     private socket: Socket | null = null;
 
-    public connect(): Socket {
+    public connect(userId?: string): Socket {
         if (this.socket?.connected) {
             return this.socket;
         }
@@ -14,6 +14,7 @@ class SocketService {
             reconnectionAttempts: 5,
             reconnectionDelay: 1000,
             autoConnect: true,
+            query: userId ? { userId } : undefined,
         });
 
         this.socket.on('connect', () => {
@@ -47,9 +48,15 @@ class SocketService {
     }
 
     // Room Actions
-    public joinRoom(roomId: string) {
+    public joinRoom(roomId: string, userId: string) {
         if (this.socket) {
-            this.socket.emit('join-room', roomId, this.socket.id);
+            this.socket.emit('join-room', roomId, userId);
+        }
+    }
+
+    public leaveRoom(roomId: string) {
+        if (this.socket) {
+            this.socket.emit('leave-room', roomId);
         }
     }
 

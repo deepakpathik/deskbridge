@@ -1,17 +1,17 @@
-import { Monitor, Zap, Users, Settings, Copy, Check, Sparkles, ChevronRight } from 'lucide-react';
+import { Monitor, Zap, Settings, Copy, Check } from 'lucide-react';
 import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore';
+import navbarLogo from '../../assets/navbar_logo.png';
 
 interface MobileHomeScreenProps {
-  onAcceptConnection: () => void;
   onOpenSettings: () => void;
 }
 
-export function MobileHomeScreen({ onAcceptConnection, onOpenSettings }: MobileHomeScreenProps) {
+export function MobileHomeScreen({ onOpenSettings }: MobileHomeScreenProps) {
   const [deviceIdInput, setDeviceIdInput] = useState('');
   const [copied, setCopied] = useState(false);
 
-  const { status, myDeviceId, connectToDevice } = useAppStore();
+  const { status, myDeviceId, connectToDevice, isSocketConnected } = useAppStore();
 
   const displayDeviceId = myDeviceId || 'Generating...';
 
@@ -32,20 +32,20 @@ export function MobileHomeScreen({ onAcceptConnection, onOpenSettings }: MobileH
   const getStatusColor = () => {
     switch (status) {
       case 'IDLE':
-        return 'bg-emerald-400';
+        return isSocketConnected ? '#10b981' : '#ef4444';
       case 'CONNECTING':
-        return 'bg-amber-400';
+        return '#f59e0b';
       case 'CONNECTED':
-        return 'bg-blue-400';
+        return '#3b82f6';
       default:
-        return 'bg-gray-500';
+        return '#ef4444';
     }
   };
 
   const getStatusText = () => {
     switch (status) {
       case 'IDLE':
-        return 'Online';
+        return isSocketConnected ? 'Online' : 'Offline';
       case 'CONNECTING':
         return 'Connecting...';
       case 'CONNECTED':
@@ -57,25 +57,24 @@ export function MobileHomeScreen({ onAcceptConnection, onOpenSettings }: MobileH
 
   return (
     <div className="w-full h-full flex flex-col">
-      <header className="flex items-center justify-between px-5 py-4 backdrop-blur-2xl bg-white/[0.02] border-b border-white/10 shadow-lg sticky top-0 z-50">
+      <header className="flex items-center justify-between px-5 py-2 backdrop-blur-2xl bg-gray-900/60 border border-white/10 shadow-lg sticky top-4 z-50 mx-5 rounded-full">
         <div className="flex items-center gap-3">
-          <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 via-cyan-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
-            <Monitor className="w-5 h-5" />
-            <div className="absolute -top-0.5 -right-0.5">
-              <Sparkles className="w-2.5 h-2.5 text-yellow-400" />
-            </div>
-          </div>
-          <div>
-            <h1 className="text-lg font-bold bg-gradient-to-r from-blue-400 via-cyan-400 to-purple-400 bg-clip-text text-transparent">
-              DeskBridge
-            </h1>
-            <p className="text-[10px] text-gray-400 font-medium">Remote Desktop</p>
-          </div>
+          <img
+            src={navbarLogo}
+            alt="DeskBridge"
+            className="h-8 w-auto object-contain"
+          />
         </div>
 
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.05] backdrop-blur-xl border border-white/20">
-            <div className={`w-1.5 h-1.5 rounded-full ${getStatusColor()} animate-pulse`}></div>
+            <div
+              className="w-2.5 h-2.5 shrink-0 rounded-full border border-white/20 animate-pulse transition-colors duration-300"
+              style={{
+                backgroundColor: getStatusColor(),
+                boxShadow: `0 0 8px ${getStatusColor()}`
+              }}
+            />
             <span className="text-xs font-medium">{getStatusText()}</span>
           </div>
 
@@ -90,7 +89,7 @@ export function MobileHomeScreen({ onAcceptConnection, onOpenSettings }: MobileH
 
       <div className="flex-1 overflow-auto px-5 py-6">
         <div className="space-y-5">
-          <div className="group rounded-3xl p-6 backdrop-blur-2xl bg-gradient-to-br from-white/10 to-white/[0.03] border border-white/20 shadow-2xl">
+          <div className="group rounded-3xl p-6 backdrop-blur-3xl bg-black/20 border border-white/10 shadow-xl">
             <div className="flex items-center gap-3 mb-5">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 backdrop-blur-xl flex items-center justify-center border border-blue-400/30 shadow-lg shadow-blue-500/20">
                 <Zap className="w-5 h-5 text-blue-400" />
@@ -128,7 +127,7 @@ export function MobileHomeScreen({ onAcceptConnection, onOpenSettings }: MobileH
             </button>
           </div>
 
-          <div className="rounded-3xl p-6 backdrop-blur-2xl bg-gradient-to-br from-white/10 to-white/[0.03] border border-white/20 shadow-2xl">
+          <div className="rounded-3xl p-6 backdrop-blur-3xl bg-black/20 border border-white/10 shadow-xl">
             <div className="flex items-center gap-3 mb-5">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 backdrop-blur-xl flex items-center justify-center border border-emerald-400/30 shadow-lg shadow-emerald-500/20">
                 <Monitor className="w-5 h-5 text-emerald-400" />
@@ -166,24 +165,7 @@ export function MobileHomeScreen({ onAcceptConnection, onOpenSettings }: MobileH
             </div>
           </div>
 
-          <div className="rounded-3xl p-6 backdrop-blur-2xl bg-gradient-to-br from-white/10 to-white/[0.03] border border-white/20 shadow-2xl">
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 backdrop-blur-xl flex items-center justify-center border border-purple-400/30 shadow-lg shadow-purple-500/20">
-                <Users className="w-5 h-5 text-purple-400" />
-              </div>
-              <div>
-                <h2 className="font-bold">Accept Connection</h2>
-                <p className="text-xs text-gray-400">Allow remote access</p>
-              </div>
-            </div>
-
-            <button
-              onClick={onAcceptConnection}
-              className="w-full py-4 rounded-xl bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 active:scale-95 transition-all font-semibold shadow-lg shadow-purple-500/30"
-            >
-              Accept Incoming Connection
-            </button>
-          </div>
+          {/* Removed Accept Connection Card */}
         </div>
       </div>
     </div>

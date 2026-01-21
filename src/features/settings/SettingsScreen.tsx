@@ -9,9 +9,10 @@ import {
   Save,
   RotateCcw,
   ChevronRight,
-  Sparkles,
   Shield
 } from 'lucide-react';
+import navbarLogo from '../../assets/navbar_logo.png';
+import { useAppStore } from '../../store/useAppStore';
 
 interface SettingsScreenProps {
   onClose: () => void;
@@ -29,6 +30,30 @@ export function SettingsScreen({ onClose }: SettingsScreenProps) {
   const [requirePassword, setRequirePassword] = useState(false);
   const [showNotifications, setShowNotifications] = useState(true);
 
+  const { status, isSocketConnected } = useAppStore();
+
+  const getStatusColor = () => {
+    switch (status) {
+      case 'CONNECTED': return '#10b981'; // Emerald-500
+      case 'CONNECTING': return '#f59e0b'; // Amber-500
+      case 'IN_SESSION': return '#3b82f6'; // Blue-500
+      case 'DISCONNECTED': return '#ef4444'; // Red-500
+      case 'IDLE': return isSocketConnected ? '#10b981' : '#ef4444';
+      default: return '#ef4444';
+    }
+  };
+
+  const getStatusText = () => {
+    switch (status) {
+      case 'CONNECTED': return 'Online';
+      case 'CONNECTING': return 'Connecting...';
+      case 'IN_SESSION': return 'Active Session';
+      case 'DISCONNECTED': return 'Disconnected';
+      case 'IDLE': return isSocketConnected ? 'Online' : 'Offline';
+      default: return 'Offline';
+    }
+  };
+
   const tabs = [
     { id: 'streaming' as const, label: 'Streaming Quality', icon: Video, color: 'from-blue-500 to-cyan-500' },
     { id: 'security' as const, label: 'Security & Privacy', icon: Lock, color: 'from-purple-500 to-pink-500' },
@@ -38,32 +63,48 @@ export function SettingsScreen({ onClose }: SettingsScreenProps) {
 
   return (
     <div className="w-full h-full flex flex-col">
-      <header className="flex items-center justify-between px-8 py-6 backdrop-blur-2xl bg-white/[0.02] border-b border-white/10 shadow-lg">
-        <div className="flex items-center gap-4">
-          <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
-            <Monitor className="w-7 h-7" />
-            <div className="absolute -top-1 -right-1">
-              <Sparkles className="w-4 h-4 text-yellow-400 animate-pulse" />
-            </div>
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-              Settings
-            </h1>
-            <p className="text-xs text-gray-400 font-medium">Configure your DeskBridge experience</p>
-          </div>
+      <header className="flex items-center justify-between px-8 py-3 backdrop-blur-2xl bg-gray-900/60 border-2 border-white/30 shadow-lg relative mx-12 mt-8 rounded-full">
+        {/* Left: Logo */}
+        <div className="flex items-center gap-4 z-10">
+          <img
+            src={navbarLogo}
+            alt="DeskBridge"
+            className="h-20 w-auto object-contain"
+          />
         </div>
 
-        <button
-          onClick={onClose}
-          className="p-3 rounded-xl hover:bg-white/10 transition-all backdrop-blur-xl bg-white/[0.03] border border-white/10 hover:border-white/20 shadow-lg hover:scale-105 duration-200"
-        >
-          <X className="w-5 h-5" />
-        </button>
+        {/* Center: Title */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+            Settings
+          </h1>
+        </div>
+
+        {/* Right: Close Button */}
+        <div className="z-10 flex items-center gap-4">
+          {/* Connection Status Pill */}
+          <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-white/[0.05] backdrop-blur-xl border-2 border-white/30">
+            <div
+              className="w-3 h-3 shrink-0 rounded-full border border-white/20 animate-pulse transition-colors duration-300"
+              style={{
+                backgroundColor: getStatusColor(),
+                boxShadow: `0 0 10px ${getStatusColor()}`
+              }}
+            />
+            <span className="text-xs font-semibold text-gray-300 uppercase tracking-wider">{getStatusText()}</span>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="p-3 rounded-xl hover:bg-white/10 transition-all backdrop-blur-xl bg-white/[0.03] border-2 border-white/30 hover:border-white/40 shadow-lg hover:scale-105 duration-200"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
       </header>
 
       <div className="flex-1 flex overflow-hidden">
-        <div className="w-72 border-r border-white/10 p-6 backdrop-blur-xl bg-white/[0.01]">
+        <div className="w-72 shadow-2xl p-6 backdrop-blur-3xl bg-black/40 relative z-10">
           <div className="space-y-2">
             {tabs.map((tab) => {
               const Icon = tab.icon;
@@ -103,7 +144,11 @@ export function SettingsScreen({ onClose }: SettingsScreenProps) {
               </div>
             </div>
           </div>
+          {/* Absolute Vertical Divider */}
+          <div className="absolute top-0 right-0 w-[6px] h-full bg-white z-50"></div>
         </div>
+
+
 
         <div className="flex-1 overflow-auto p-8">
           <div className="max-w-4xl mx-auto">
@@ -118,7 +163,7 @@ export function SettingsScreen({ onClose }: SettingsScreenProps) {
                   </p>
                 </div>
 
-                <div className="backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/[0.03] rounded-2xl p-8 border border-white/20 shadow-xl">
+                <div className="backdrop-blur-3xl bg-black/20 rounded-2xl p-8 border-2 border-white/30 shadow-2xl">
                   <label className="block text-base font-semibold mb-4 flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center border border-blue-400/30">
                       <Monitor className="w-4 h-4 text-blue-400" />
@@ -280,7 +325,7 @@ export function SettingsScreen({ onClose }: SettingsScreenProps) {
                   <p className="text-sm text-gray-400 mb-5">
                     Automatically disconnect after period of inactivity
                   </p>
-                  <select className="w-full px-5 py-4 backdrop-blur-xl bg-black/30 border border-white/20 rounded-xl focus:outline-none focus:border-purple-500/50 focus:ring-4 focus:ring-purple-500/20 transition-all font-medium">
+                  <select className="w-full px-5 py-4 backdrop-blur-xl bg-black/30 border-2 border-white/40 rounded-xl focus:outline-none focus:border-purple-500/50 focus:ring-4 focus:ring-purple-500/20 transition-all font-medium">
                     <option>Never</option>
                     <option>15 minutes</option>
                     <option>30 minutes</option>
@@ -290,7 +335,7 @@ export function SettingsScreen({ onClose }: SettingsScreenProps) {
                 </div>
 
                 {/* Allowed Devices - Glass Card */}
-                <div className="backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/[0.03] rounded-2xl p-8 border border-white/20 shadow-xl">
+                <div className="backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/[0.03] rounded-2xl p-8 border-2 border-white/30 shadow-xl">
                   <h3 className="font-semibold text-lg mb-3">Connection Whitelist</h3>
                   <p className="text-sm text-gray-400 mb-5">
                     Only allow connections from specific device IDs
@@ -430,7 +475,7 @@ export function SettingsScreen({ onClose }: SettingsScreenProps) {
                 Save Changes
               </button>
 
-              <button className="px-8 py-4 rounded-xl backdrop-blur-xl bg-white/5 hover:bg-white/10 transition-all font-semibold flex items-center gap-2 border border-white/20 hover:border-white/30 hover:scale-105 duration-200">
+              <button className="px-8 py-4 rounded-xl backdrop-blur-xl bg-white/5 hover:bg-white/10 transition-all font-semibold flex items-center gap-2 border-2 border-white/30 hover:border-white/40 hover:scale-105 duration-200">
                 <RotateCcw className="w-5 h-5" />
                 Reset to Default
               </button>
@@ -439,5 +484,6 @@ export function SettingsScreen({ onClose }: SettingsScreenProps) {
         </div>
       </div>
     </div>
+
   );
 }

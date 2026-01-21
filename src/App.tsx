@@ -9,6 +9,8 @@ import { MobileSettingsScreen } from './features/settings/MobileSettingsScreen';
 import { useIsMobile } from './hooks/useIsMobile';
 import { useAppStore } from './store/useAppStore';
 
+import backgroundImage from './assets/background_image.jpeg';
+
 export type Screen = 'home' | 'session' | 'settings';
 
 export interface Connection {
@@ -19,6 +21,17 @@ export interface Connection {
   duration: string;
 }
 
+
+declare global {
+  interface Window {
+    electronAPI?: {
+      platform: string;
+      checkPermissions: () => Promise<{ screen: string; mic: string }>;
+      requestMediaAccess: (mediaType: 'microphone' | 'camera') => Promise<boolean>;
+    };
+  }
+}
+
 export default function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { status, setStatus, disconnect, initializeSocket, approveConnection, denyConnection, remoteDeviceId } = useAppStore();
@@ -26,6 +39,19 @@ export default function App() {
 
   useEffect(() => {
     initializeSocket();
+
+    // Check permissions on startup
+    const checkPermissions = async () => {
+      if (window.electronAPI) {
+        const perms = await window.electronAPI.checkPermissions();
+        console.log('OS Permissions:', perms);
+
+        // If screen recording is needed (AnyDesk clone), we might want to warn if not granted.
+        // On macOS, we can't force-prompt for screen easily without trying to capture.
+        // But we can prompt for mic/camera if we used audio.
+      }
+    };
+    checkPermissions();
   }, []);
 
   // Remove local handlers as we now use store actions directly or wrapped
@@ -69,9 +95,6 @@ export default function App() {
     if (isMobile) {
       return (
         <MobileHomeScreen
-          onAcceptConnection={() => {
-            console.log("Accept connection clicked - awaiting incoming requests");
-          }}
           onOpenSettings={handleOpenSettings}
         />
       );
@@ -79,21 +102,22 @@ export default function App() {
 
     return (
       <HomeScreen
-        onAcceptConnection={() => {
-          console.log("Accept connection clicked - awaiting incoming requests");
-        }}
         onOpenSettings={handleOpenSettings}
       />
     );
   };
 
   return (
-    <div className="w-full h-screen bg-gradient-to-br from-[#0a0d14] via-[#1a1625] to-[#0f1419] text-white overflow-hidden relative">
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 -left-32 w-96 h-96 bg-blue-500/20 rounded-full blur-[120px] animate-pulse"></div>
-        <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-purple-500/20 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '1s' }}></div>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-cyan-500/10 rounded-full blur-[150px]"></div>
-      </div>
+    <div
+      className="w-full h-screen text-white overflow-hidden relative bg-black"
+      style={{
+        backgroundImage: `url(${backgroundImage})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }}
+    >
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" /> {/* Optional overlay for readability */}
 
       <div className="relative z-10 w-full h-full">
         {renderContent()}

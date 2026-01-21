@@ -93,7 +93,7 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
               />
 
               <div className="relative w-full h-full flex flex-col items-center justify-center gap-6">
-                <div className="p-8 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl text-center space-y-4 shadow-2xl">
+                <div className="p-8 rounded-3xl bg-white/5 border-2 border-white/30 backdrop-blur-xl text-center space-y-4 shadow-2xl">
                   <div className="w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center border border-white/10">
                     <Cast className="w-10 h-10 text-blue-400" />
                   </div>
@@ -114,7 +114,7 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
           </div>
         )}
 
-        <div className="absolute top-6 left-6 flex items-center gap-3 px-5 py-3 backdrop-blur-2xl bg-red-500/20 rounded-2xl border border-red-500/50 shadow-2xl shadow-red-500/20">
+        <div className="absolute top-6 left-6 flex items-center gap-3 px-5 py-3 backdrop-blur-2xl bg-red-500/20 rounded-2xl border-2 border-red-500/50 shadow-2xl shadow-red-500/20">
           <div className="relative flex items-center justify-center">
             <div className={`w-3 h-3 rounded-full shadow-lg ${localStream ? 'bg-red-500 animate-pulse shadow-red-500/50' : 'bg-gray-500'}`}></div>
             {localStream && <div className="absolute w-3 h-3 bg-red-500 rounded-full animate-ping"></div>}
@@ -122,7 +122,7 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
           <span className="text-sm font-bold tracking-wide">{localStream ? 'LIVE STREAM' : 'READY TO SHARE'}</span>
         </div>
 
-        <div className="absolute top-6 right-6 backdrop-blur-2xl bg-black/40 rounded-2xl border border-white/20 shadow-2xl overflow-hidden">
+        <div className="absolute top-6 right-6 backdrop-blur-2xl bg-black/40 rounded-2xl border-2 border-white/30 shadow-2xl overflow-hidden">
           <div className="px-6 py-4">
             <div className="flex items-center gap-5 text-xs">
               <div className="flex items-center gap-2">
@@ -135,7 +135,7 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
                 </div>
               </div>
 
-              <div className="w-px h-10 bg-white/10"></div>
+              <div className="w-1 h-10 bg-white/30 rounded-full"></div>
 
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center border border-purple-400/30">
@@ -147,7 +147,7 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
                 </div>
               </div>
 
-              <div className="w-px h-10 bg-white/10"></div>
+              <div className="w-1 h-10 bg-white/30 rounded-full"></div>
 
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 flex items-center justify-center border border-emerald-400/30">
@@ -170,7 +170,7 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
         <div className="relative">
           <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-pink-500/20 blur-xl rounded-3xl"></div>
 
-          <div className="relative px-8 py-5 backdrop-blur-2xl bg-black/60 rounded-3xl border border-white/30 shadow-2xl">
+          <div className="relative px-8 py-5 backdrop-blur-2xl bg-black/60 rounded-3xl border-2 border-white/50 shadow-2xl">
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setMouseControl(!mouseControl)}
@@ -194,13 +194,13 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
                 <Keyboard className="w-5 h-5" />
               </button>
 
-              <div className="w-px h-10 bg-gradient-to-b from-transparent via-white/20 to-transparent mx-2"></div>
+              <div className="w-1 h-10 bg-gradient-to-b from-transparent via-white/40 to-transparent mx-2 rounded-full"></div>
 
               <button
                 onClick={() => setAudioEnabled(!audioEnabled)}
                 className={`p-4 rounded-xl backdrop-blur-xl border border-white/10 transition-all duration-200 ${audioEnabled
                   ? 'bg-white/5 hover:bg-white/10 text-white'
-                  : 'bg-red-500/20 text-red-400 hover:bg-red-500/30 border-red-500/30'
+                  : 'bg-red-500/20 text-red-400 hover:bg-red-500/30 border-2 border-red-500/40'
                   }`}
                 title="Audio"
               >
@@ -209,7 +209,7 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
 
               <button
                 onClick={() => setIsFullscreen(!isFullscreen)}
-                className="p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-all backdrop-blur-xl border border-white/10 hover:border-white/20 hover:scale-105 duration-200"
+                className="p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-all backdrop-blur-xl border-2 border-white/30 hover:border-white/50 hover:scale-105 duration-200"
                 title="Fullscreen"
               >
                 {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
@@ -217,7 +217,7 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
 
               <button
                 onClick={handleStartShare}
-                className={`p-4 rounded-xl backdrop-blur-xl border border-white/10 transition-all duration-200 ${localStream
+                className={`p-4 rounded-xl backdrop-blur-xl border-2 border-white/30 transition-all duration-200 ${localStream
                   ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30 border-green-500/30'
                   : 'bg-white/5 hover:bg-white/10 text-white'
                   }`}
@@ -226,7 +226,7 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
                 <Cast className="w-5 h-5" />
               </button>
 
-              <div className="w-px h-10 bg-gradient-to-b from-transparent via-white/20 to-transparent mx-2"></div>
+              <div className="w-1 h-10 bg-gradient-to-b from-transparent via-white/40 to-transparent mx-2 rounded-full"></div>
 
               <button
                 onClick={onDisconnect}
@@ -241,7 +241,7 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
         </div>
       </div>
 
-      <div className="absolute bottom-8 left-8 px-5 py-3 backdrop-blur-2xl bg-black/40 rounded-2xl border border-white/20 shadow-2xl">
+      <div className="absolute bottom-8 left-8 px-5 py-3 backdrop-blur-2xl bg-black/40 rounded-2xl border-2 border-white/30 shadow-2xl">
         <div className="flex items-center gap-3">
           <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse shadow-lg shadow-emerald-400/50"></div>
           <div className="text-xs">
