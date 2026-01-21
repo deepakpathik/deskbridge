@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { socketService } from '../services/socketService';
+import { getOrCreateDeviceId } from '../utils/deviceId';
 
 export type AppStatus = 'IDLE' | 'CONNECTING' | 'CONNECTED' | 'IN_SESSION' | 'ERROR';
 
@@ -19,7 +20,7 @@ interface AppStore {
 
 export const useAppStore = create<AppStore>((set) => ({
     status: 'IDLE',
-    myDeviceId: null,
+    myDeviceId: getOrCreateDeviceId(),
     remoteDeviceId: null,
     isSocketConnected: false,
 

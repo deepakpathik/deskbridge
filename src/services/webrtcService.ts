@@ -13,7 +13,7 @@ export class WebRTCService {
                     cursor: 'always',
                 },
                 audio: false // System audio capture support varies by OS
-            });
+            } as any);
 
             this.localStream = stream;
             return stream;
@@ -57,6 +57,30 @@ export class WebRTCService {
 
     public getPeerConnection(): RTCPeerConnection | null {
         return this.peerConnection;
+    }
+
+
+    public async createOffer(): Promise<RTCSessionDescriptionInit> {
+        if (!this.peerConnection) {
+            this.createPeerConnection();
+        }
+
+        // Add local stream tracks to PeerConnection
+        if (this.localStream && this.peerConnection) {
+            this.localStream.getTracks().forEach(track => {
+                if (this.peerConnection && this.localStream) {
+                    this.peerConnection.addTrack(track, this.localStream);
+                }
+            });
+        }
+
+        if (!this.peerConnection) {
+            throw new Error('PeerConnection not initialized');
+        }
+
+        const offer = await this.peerConnection.createOffer();
+        await this.peerConnection.setLocalDescription(offer);
+        return offer;
     }
 
     public getLocalStream(): MediaStream | null {
