@@ -1,4 +1,5 @@
 export class WebRTCService {
+    private onIceCandidateCallback: ((candidate: RTCIceCandidate) => void) | null = null;
     private localStream: MediaStream | null = null;
     private peerConnection: RTCPeerConnection | null = null;
 
@@ -40,11 +41,10 @@ export class WebRTCService {
 
         this.peerConnection = new RTCPeerConnection(configuration);
 
-        // Debug logging for ICE candidates
+        // Handle ICE candidates
         this.peerConnection.onicecandidate = (event) => {
             if (event.candidate) {
-                // We will handle emitting this via socket in a later step
-                // console.log('New ICE candidate:', event.candidate); 
+                this.onIceCandidateCallback?.(event.candidate);
             }
         };
 
@@ -53,6 +53,19 @@ export class WebRTCService {
         };
 
         return this.peerConnection;
+    }
+
+    // Register callback for generated candidates
+    public onIceCandidate(callback: (candidate: RTCIceCandidate) => void) {
+        this.onIceCandidateCallback = callback;
+    }
+
+    // Handle incoming candidates from remote peer
+    public async handleCandidate(candidate: RTCIceCandidateInit): Promise<void> {
+        if (!this.peerConnection) {
+            throw new Error('PeerConnection not initialized');
+        }
+        await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
     }
 
     public getPeerConnection(): RTCPeerConnection | null {
