@@ -1,5 +1,6 @@
 export class WebRTCService {
     private onIceCandidateCallback: ((candidate: RTCIceCandidate) => void) | null = null;
+    private onTrackCallback: ((stream: MediaStream) => void) | null = null;
     private localStream: MediaStream | null = null;
     private peerConnection: RTCPeerConnection | null = null;
 
@@ -48,11 +49,23 @@ export class WebRTCService {
             }
         };
 
+        // Handle incoming tracks (Remote Stream)
+        this.peerConnection.ontrack = (event) => {
+            console.log('Received remote track', event.streams);
+            if (event.streams && event.streams[0]) {
+                this.onTrackCallback?.(event.streams[0]);
+            }
+        };
+
         this.peerConnection.onconnectionstatechange = () => {
             console.log('Peer connection state:', this.peerConnection?.connectionState);
         };
 
         return this.peerConnection;
+    }
+
+    public onTrack(callback: (stream: MediaStream) => void) {
+        this.onTrackCallback = callback;
     }
 
     // Register callback for generated candidates
