@@ -21,7 +21,11 @@ interface LiveSessionScreenProps {
   onDisconnect: () => void;
 }
 
+import { useWebRTC } from '../../hooks/useWebRTC';
+
 export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
+  useWebRTC(); // Initialize WebRTC signaling and handshake handling
+
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showToolbar, setShowToolbar] = useState(true);
   const [audioEnabled, setAudioEnabled] = useState(true);

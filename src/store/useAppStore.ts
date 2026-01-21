@@ -9,6 +9,7 @@ interface AppStore {
     myDeviceId: string | null;
     remoteDeviceId: string | null;
     isSocketConnected: boolean;
+    isCaller: boolean;
 
     // Actions
     initializeSocket: () => void;
@@ -25,12 +26,18 @@ export const useAppStore = create<AppStore>((set, get) => ({
     myDeviceId: getOrCreateDeviceId(),
     remoteDeviceId: null,
     isSocketConnected: false,
+    isCaller: false,
 
     initializeSocket: () => {
         const socket = socketService.connect();
 
         socket.on('connect', () => {
             set({ isSocketConnected: true });
+            const { myDeviceId } = get();
+            if (myDeviceId) {
+                console.log('Joining my own room:', myDeviceId);
+                socketService.joinRoom(myDeviceId);
+            }
         });
 
         socket.on('disconnect', () => {
@@ -46,23 +53,14 @@ export const useAppStore = create<AppStore>((set, get) => ({
             console.log('Remote user connected:', userId);
             // If I am waiting for connection (CONNECTED), this means someone joined my room.
             // We should ask for approval.
-            const currentStatus = get().status;
-            if (currentStatus === 'CONNECTED') {
-                set({ status: 'INCOMING_REQUEST', remoteDeviceId: userId });
-            } else {
-                // If I initiated the connection (CONNECTING), I should just go to IN_SESSION
-                // But wait, the caller joins the room too? Protocol needs clarification.
-                // Current backend implementation: logic is symmetric.
-                // If I am CONNECTING, I joined a room.
-                // If I am HOST (IDLE/CONNECTED), I created a room (implicitly by joining my own ID?).
-                // Let's assume for now:
-                // If status is CONNECTING -> We initiated -> Go to IN_SESSION (Peer approved implicitly or we are the caller)
-                // If status is CONNECTED -> We are host -> Incoming request -> Go to INCOMING_REQUEST
-                if (currentStatus === 'CONNECTING') {
-                    set({ status: 'IN_SESSION', remoteDeviceId: userId });
-                } else {
-                    set({ status: 'INCOMING_REQUEST', remoteDeviceId: userId });
-                }
+            const { status, isCaller } = get();
+
+            if (status === 'CONNECTED') {
+                // I am the host
+                set({ status: 'INCOMING_REQUEST', remoteDeviceId: userId, isCaller: false });
+            } else if (status === 'CONNECTING' || isCaller) {
+                // I am the caller
+                set({ status: 'IN_SESSION', remoteDeviceId: userId });
             }
         });
 
@@ -76,13 +74,13 @@ export const useAppStore = create<AppStore>((set, get) => ({
     setMyDeviceId: (id) => set({ myDeviceId: id }),
 
     connectToDevice: (targetId) => {
-        set({ status: 'CONNECTING', remoteDeviceId: targetId });
+        set({ status: 'CONNECTING', remoteDeviceId: targetId, isCaller: true });
         socketService.joinRoom(targetId);
     },
 
     disconnect: () => {
         socketService.disconnect();
-        set({ status: 'IDLE', remoteDeviceId: null });
+        set({ status: 'IDLE', remoteDeviceId: null, isCaller: false });
     },
 
     approveConnection: () => {
@@ -92,6 +90,6 @@ export const useAppStore = create<AppStore>((set, get) => ({
     denyConnection: () => {
         // Here we might want to emit an event to kick the user or just reset our state?
         // deeper logic needed later (e.g. socket.leave), for now just UI reset.
-        set({ status: 'CONNECTED', remoteDeviceId: null });
+        set({ status: 'CONNECTED', remoteDeviceId: null, isCaller: false });
     }
 }));

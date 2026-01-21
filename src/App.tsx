@@ -21,29 +21,20 @@ export interface Connection {
 
 export default function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [showApprovalPopup, setShowApprovalPopup] = useState(false);
-  const [incomingConnection, setIncomingConnection] = useState<string | null>(null);
+  const { status, setStatus, disconnect, initializeSocket, approveConnection, denyConnection, remoteDeviceId } = useAppStore();
   const isMobile = useIsMobile();
-
-  const { status, setStatus, disconnect, initializeSocket } = useAppStore();
 
   useEffect(() => {
     initializeSocket();
   }, []);
 
-  const handleAcceptConnection = () => {
-    setIncomingConnection('Device #847291');
-    setShowApprovalPopup(true);
-  };
-
+  // Remove local handlers as we now use store actions directly or wrapped
   const handleApprove = () => {
-    setShowApprovalPopup(false);
-    setStatus('IN_SESSION');
+    approveConnection();
   };
 
   const handleDeny = () => {
-    setShowApprovalPopup(false);
-    setIncomingConnection(null);
+    denyConnection();
   };
 
   const handleDisconnect = () => {
@@ -86,14 +77,22 @@ export default function App() {
           <CurrentView onClose={handleCloseSettings} />
         ) : (
           <CurrentView
-            onAcceptConnection={handleAcceptConnection}
+            onAcceptConnection={() => {
+              // For manually triggering "Accept Connection" button (maybe debug or reverse connect?)
+              // For now, let's keep it but maybe it should just set state to IDLE or allow reverse connection?
+              // The "Accept Connection" button usually meant "Make me discoverable/ready".
+              // In our socket logic, we are always ready once connected. 
+              // Maybe we can repurpose this button or remove connection logic from it if it was dummy.
+              // For safety: no-op or specific debug action.
+              console.log("Accept connection clicked - awaiting incoming requests");
+            }}
             onOpenSettings={handleOpenSettings}
           />
         )}
 
-        {showApprovalPopup && (
+        {status === 'INCOMING_REQUEST' && (
           <ConnectionApprovalPopup
-            deviceName={incomingConnection || 'Unknown Device'}
+            deviceName={`Device ${remoteDeviceId || 'Unknown'}`}
             onApprove={handleApprove}
             onDeny={handleDeny}
           />
