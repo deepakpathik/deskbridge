@@ -17,7 +17,7 @@ class SocketService {
         });
 
         this.socket.on('connect', () => {
-            console.log('Socket connected:', this.socket?.id);
+            console.log('Socket connected');
         });
 
         this.socket.on('disconnect', () => {
@@ -44,6 +44,50 @@ class SocketService {
 
     public isConnected(): boolean {
         return this.socket?.connected || false;
+    }
+
+    // Room Actions
+    public joinRoom(roomId: string) {
+        if (this.socket) {
+            this.socket.emit('join-room', roomId, this.socket.id);
+        }
+    }
+
+    // WebRTC Signaling
+    public sendOffer(roomId: string, offer: RTCSessionDescriptionInit) {
+        if (this.socket) {
+            this.socket.emit('offer', { roomId, offer });
+        }
+    }
+
+    public onOffer(callback: (offer: RTCSessionDescriptionInit) => void) {
+        if (this.socket) {
+            this.socket.on('offer', callback);
+        }
+    }
+
+    public sendAnswer(roomId: string, answer: RTCSessionDescriptionInit) {
+        if (this.socket) {
+            this.socket.emit('answer', { roomId, answer });
+        }
+    }
+
+    public onAnswer(callback: (answer: RTCSessionDescriptionInit) => void) {
+        if (this.socket) {
+            this.socket.on('answer', callback);
+        }
+    }
+
+    public sendIceCandidate(roomId: string, candidate: RTCIceCandidate) {
+        if (this.socket) {
+            this.socket.emit('ice-candidate', { roomId, candidate });
+        }
+    }
+
+    public onIceCandidate(callback: (candidate: RTCIceCandidate) => void) {
+        if (this.socket) {
+            this.socket.on('ice-candidate', callback);
+        }
     }
 }
 
