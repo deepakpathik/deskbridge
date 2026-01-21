@@ -30,6 +30,35 @@ export class WebRTCService {
         }
     }
 
+    public createPeerConnection(): RTCPeerConnection {
+        const configuration: RTCConfiguration = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+            ]
+        };
+
+        this.peerConnection = new RTCPeerConnection(configuration);
+
+        // Debug logging for ICE candidates
+        this.peerConnection.onicecandidate = (event) => {
+            if (event.candidate) {
+                // We will handle emitting this via socket in a later step
+                // console.log('New ICE candidate:', event.candidate); 
+            }
+        };
+
+        this.peerConnection.onconnectionstatechange = () => {
+            console.log('Peer connection state:', this.peerConnection?.connectionState);
+        };
+
+        return this.peerConnection;
+    }
+
+    public getPeerConnection(): RTCPeerConnection | null {
+        return this.peerConnection;
+    }
+
     public getLocalStream(): MediaStream | null {
         return this.localStream;
     }
