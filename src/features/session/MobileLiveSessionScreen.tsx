@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { 
-  Monitor, 
-  Maximize2, 
-  Volume2, 
+import { useAppStore } from '../../store/useAppStore';
+import {
+  Monitor,
+  Maximize2,
+  Volume2,
   VolumeX,
   MousePointer,
   Keyboard,
@@ -27,6 +28,8 @@ export function MobileLiveSessionScreen({ onDisconnect }: MobileLiveSessionScree
   const [latency, setLatency] = useState(24);
   const [fps, setFps] = useState(60);
   const [bandwidth, setBandwidth] = useState(4.2);
+
+  const { remoteDeviceId } = useAppStore();
 
   // Simulate real-time metrics
   useEffect(() => {
@@ -60,7 +63,7 @@ export function MobileLiveSessionScreen({ onDisconnect }: MobileLiveSessionScree
                 <ChevronDown className="w-4 h-4" />
               </button>
               <div>
-                <div className="text-xs font-semibold">MacBook Pro - Design</div>
+                <div className="text-xs font-semibold">{remoteDeviceId || 'MacBook Pro - Design'}</div>
                 <div className="flex items-center gap-2 text-[10px] text-gray-400">
                   <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></div>
                   Connected
@@ -112,7 +115,7 @@ export function MobileLiveSessionScreen({ onDisconnect }: MobileLiveSessionScree
                 backgroundSize: '30px 30px'
               }}
             />
-            
+
             {/* Simulated windows - scaled for mobile */}
             <div className="relative w-full h-full">
               {/* Window 1 - Code Editor */}
@@ -186,11 +189,10 @@ export function MobileLiveSessionScreen({ onDisconnect }: MobileLiveSessionScree
                 {/* Mouse Control */}
                 <button
                   onClick={() => setMouseControl(!mouseControl)}
-                  className={`aspect-square rounded-2xl transition-all ${
-                    mouseControl 
-                      ? 'bg-gradient-to-br from-blue-600 to-cyan-600 shadow-lg shadow-blue-500/30' 
+                  className={`aspect-square rounded-2xl transition-all ${mouseControl
+                      ? 'bg-gradient-to-br from-blue-600 to-cyan-600 shadow-lg shadow-blue-500/30'
                       : 'bg-white/5 border border-white/10'
-                  } flex flex-col items-center justify-center gap-1 active:scale-95`}
+                    } flex flex-col items-center justify-center gap-1 active:scale-95`}
                 >
                   <MousePointer className="w-5 h-5" />
                   <span className="text-[10px]">Mouse</span>
@@ -199,11 +201,10 @@ export function MobileLiveSessionScreen({ onDisconnect }: MobileLiveSessionScree
                 {/* Keyboard Control */}
                 <button
                   onClick={() => setKeyboardControl(!keyboardControl)}
-                  className={`aspect-square rounded-2xl transition-all ${
-                    keyboardControl 
-                      ? 'bg-gradient-to-br from-blue-600 to-cyan-600 shadow-lg shadow-blue-500/30' 
+                  className={`aspect-square rounded-2xl transition-all ${keyboardControl
+                      ? 'bg-gradient-to-br from-blue-600 to-cyan-600 shadow-lg shadow-blue-500/30'
                       : 'bg-white/5 border border-white/10'
-                  } flex flex-col items-center justify-center gap-1 active:scale-95`}
+                    } flex flex-col items-center justify-center gap-1 active:scale-95`}
                 >
                   <Keyboard className="w-5 h-5" />
                   <span className="text-[10px]">Keyboard</span>
@@ -212,11 +213,10 @@ export function MobileLiveSessionScreen({ onDisconnect }: MobileLiveSessionScree
                 {/* Audio */}
                 <button
                   onClick={() => setAudioEnabled(!audioEnabled)}
-                  className={`aspect-square rounded-2xl transition-all ${
-                    audioEnabled 
-                      ? 'bg-white/5 border border-white/10' 
+                  className={`aspect-square rounded-2xl transition-all ${audioEnabled
+                      ? 'bg-white/5 border border-white/10'
                       : 'bg-red-500/20 border border-red-500/30'
-                  } flex flex-col items-center justify-center gap-1 active:scale-95`}
+                    } flex flex-col items-center justify-center gap-1 active:scale-95`}
                 >
                   {audioEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5 text-red-400" />}
                   <span className="text-[10px]">Audio</span>

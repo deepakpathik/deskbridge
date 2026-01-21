@@ -1,63 +1,41 @@
-import { Monitor, Zap, Users, Settings, Copy, Check, Menu, Sparkles, ChevronRight } from 'lucide-react';
+import { Monitor, Zap, Users, Settings, Copy, Check, Sparkles, ChevronRight } from 'lucide-react';
 import { useState } from 'react';
-import type { ConnectionStatus, Connection } from '../../App';
+import { useAppStore } from '../../store/useAppStore';
 
 interface MobileHomeScreenProps {
-  connectionStatus: ConnectionStatus;
-  onConnect: (deviceId: string) => void;
   onAcceptConnection: () => void;
   onOpenSettings: () => void;
 }
 
-const recentConnections: Connection[] = [
-  {
-    id: '1',
-    deviceId: '847291',
-    deviceName: 'MacBook Pro - Design',
-    lastConnected: '2h ago',
-    duration: '45m',
-  },
-  {
-    id: '2',
-    deviceId: '593847',
-    deviceName: 'Windows Desktop',
-    lastConnected: 'Yesterday',
-    duration: '1h 20m',
-  },
-  {
-    id: '3',
-    deviceId: '234091',
-    deviceName: 'Linux Workstation',
-    lastConnected: '3d ago',
-    duration: '30m',
-  },
-];
-
-export function MobileHomeScreen({ connectionStatus, onConnect, onAcceptConnection, onOpenSettings }: MobileHomeScreenProps) {
+export function MobileHomeScreen({ onAcceptConnection, onOpenSettings }: MobileHomeScreenProps) {
   const [deviceIdInput, setDeviceIdInput] = useState('');
   const [copied, setCopied] = useState(false);
-  const [showMenu, setShowMenu] = useState(false);
-  const myDeviceId = '452-891-376';
+
+  const { status, myDeviceId, connectToDevice } = useAppStore();
+
+  const displayDeviceId = myDeviceId || 'Generating...';
 
   const handleCopyId = () => {
-    navigator.clipboard.writeText(myDeviceId);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    if (myDeviceId) {
+      navigator.clipboard.writeText(myDeviceId);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   const handleConnect = () => {
     if (deviceIdInput.trim()) {
-      onConnect(deviceIdInput);
+      connectToDevice(deviceIdInput);
     }
   };
 
   const getStatusColor = () => {
-    switch (connectionStatus) {
-      case 'online':
+    switch (status) {
+      case 'IDLE':
         return 'bg-emerald-400';
-      case 'connecting':
+      case 'CONNECTING':
         return 'bg-amber-400';
-      case 'connected':
+      case 'CONNECTED':
         return 'bg-blue-400';
       default:
         return 'bg-gray-500';
@@ -65,12 +43,12 @@ export function MobileHomeScreen({ connectionStatus, onConnect, onAcceptConnecti
   };
 
   const getStatusText = () => {
-    switch (connectionStatus) {
-      case 'online':
+    switch (status) {
+      case 'IDLE':
         return 'Online';
-      case 'connecting':
+      case 'CONNECTING':
         return 'Connecting...';
-      case 'connected':
+      case 'CONNECTED':
         return 'Connected';
       default:
         return 'Offline';
@@ -126,7 +104,7 @@ export function MobileHomeScreen({ connectionStatus, onConnect, onAcceptConnecti
             <div className="backdrop-blur-xl bg-black/30 rounded-2xl p-5 mb-5 border border-white/10 shadow-inner">
               <div className="text-center">
                 <div className="text-3xl font-bold tracking-wider mb-2 font-mono bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent">
-                  {myDeviceId}
+                  {displayDeviceId}
                 </div>
                 <p className="text-[10px] text-gray-500 uppercase tracking-wide">Your Device ID</p>
               </div>
@@ -173,10 +151,10 @@ export function MobileHomeScreen({ connectionStatus, onConnect, onAcceptConnecti
 
               <button
                 onClick={handleConnect}
-                disabled={!deviceIdInput.trim() || connectionStatus === 'connecting'}
+                disabled={!deviceIdInput.trim() || status === 'CONNECTING'}
                 className="w-full py-4 rounded-xl bg-gradient-to-r from-emerald-600 to-cyan-600 disabled:from-gray-700 disabled:to-gray-800 disabled:cursor-not-allowed active:scale-95 transition-all font-semibold shadow-lg shadow-emerald-500/30 disabled:shadow-none"
               >
-                {connectionStatus === 'connecting' ? (
+                {status === 'CONNECTING' ? (
                   <span className="flex items-center justify-center gap-2">
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                     Connecting...
@@ -205,41 +183,6 @@ export function MobileHomeScreen({ connectionStatus, onConnect, onAcceptConnecti
             >
               Accept Incoming Connection
             </button>
-          </div>
-
-          <div className="rounded-3xl p-6 backdrop-blur-2xl bg-gradient-to-br from-white/10 to-white/[0.03] border border-white/20 shadow-2xl">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="font-bold">Recent Connections</h2>
-              <div className="px-2.5 py-1 rounded-lg bg-blue-500/20 backdrop-blur-xl border border-blue-400/30 text-[10px] font-semibold text-blue-400">
-                {recentConnections.length}
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              {recentConnections.map((conn) => (
-                <button
-                  key={conn.id}
-                  onClick={() => onConnect(conn.deviceId)}
-                  className="w-full p-4 backdrop-blur-xl bg-black/20 active:bg-white/10 border border-white/10 rounded-xl transition-all text-left"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="font-semibold text-sm">
-                      {conn.deviceName}
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-gray-500" />
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-gray-500">
-                    <span className="px-2 py-0.5 rounded bg-white/5 border border-white/10 font-mono text-[10px]">
-                      {conn.deviceId}
-                    </span>
-                    <span>•</span>
-                    <span>{conn.lastConnected}</span>
-                    <span>•</span>
-                    <span>{conn.duration}</span>
-                  </div>
-                </button>
-              ))}
-            </div>
           </div>
         </div>
       </div>

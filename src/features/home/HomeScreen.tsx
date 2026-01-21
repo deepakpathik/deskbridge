@@ -1,62 +1,40 @@
 import { Monitor, Zap, Users, Settings, Copy, Check, Sparkles } from 'lucide-react';
 import { useState } from 'react';
-import type { ConnectionStatus, Connection } from '../../App';
+import { useAppStore } from '../../store/useAppStore';
 
 interface HomeScreenProps {
-  connectionStatus: ConnectionStatus;
-  onConnect: (deviceId: string) => void;
   onAcceptConnection: () => void;
   onOpenSettings: () => void;
 }
 
-const recentConnections: Connection[] = [
-  {
-    id: '1',
-    deviceId: '847291',
-    deviceName: 'MacBook Pro - Design Team',
-    lastConnected: '2 hours ago',
-    duration: '45 min',
-  },
-  {
-    id: '2',
-    deviceId: '593847',
-    deviceName: 'Windows Desktop - Dev Server',
-    lastConnected: 'Yesterday',
-    duration: '1h 20min',
-  },
-  {
-    id: '3',
-    deviceId: '234091',
-    deviceName: 'Linux Workstation',
-    lastConnected: '3 days ago',
-    duration: '30 min',
-  },
-];
-
-export function HomeScreen({ connectionStatus, onConnect, onAcceptConnection, onOpenSettings }: HomeScreenProps) {
+export function HomeScreen({ onAcceptConnection, onOpenSettings }: HomeScreenProps) {
   const [deviceIdInput, setDeviceIdInput] = useState('');
   const [copied, setCopied] = useState(false);
-  const myDeviceId = '452-891-376';
+  const { status, myDeviceId, connectToDevice } = useAppStore();
+
+  const displayDeviceId = myDeviceId || 'Generating...';
 
   const handleCopyId = () => {
-    navigator.clipboard.writeText(myDeviceId);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    if (myDeviceId) {
+      navigator.clipboard.writeText(myDeviceId);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   const handleConnect = () => {
     if (deviceIdInput.trim()) {
-      onConnect(deviceIdInput);
+      connectToDevice(deviceIdInput);
     }
   };
 
   const getStatusColor = () => {
-    switch (connectionStatus) {
-      case 'online':
+    switch (status) {
+      case 'IDLE':
         return 'bg-emerald-400';
-      case 'connecting':
+      case 'CONNECTING':
         return 'bg-amber-400';
-      case 'connected':
+      case 'CONNECTED':
         return 'bg-blue-400';
       default:
         return 'bg-gray-500';
@@ -64,12 +42,12 @@ export function HomeScreen({ connectionStatus, onConnect, onAcceptConnection, on
   };
 
   const getStatusText = () => {
-    switch (connectionStatus) {
-      case 'online':
+    switch (status) {
+      case 'IDLE':
         return 'Online';
-      case 'connecting':
+      case 'CONNECTING':
         return 'Connecting...';
-      case 'connected':
+      case 'CONNECTED':
         return 'Connected';
       default:
         return 'Offline';
@@ -134,7 +112,7 @@ export function HomeScreen({ connectionStatus, onConnect, onAcceptConnection, on
                 <div className="backdrop-blur-xl bg-black/30 rounded-2xl p-8 mb-6 border border-white/10 shadow-inner">
                   <div className="text-center">
                     <div className="text-5xl font-bold tracking-wider mb-3 font-mono bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent">
-                      {myDeviceId}
+                      {displayDeviceId}
                     </div>
                     <p className="text-xs text-gray-500 uppercase tracking-wide">Your Device ID</p>
                   </div>
@@ -213,10 +191,10 @@ export function HomeScreen({ connectionStatus, onConnect, onAcceptConnection, on
 
                   <button
                     onClick={handleConnect}
-                    disabled={!deviceIdInput.trim() || connectionStatus === 'connecting'}
+                    disabled={!deviceIdInput.trim() || status === 'CONNECTING'}
                     className="w-full py-5 rounded-xl bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 disabled:from-gray-700 disabled:to-gray-800 disabled:cursor-not-allowed transition-all font-semibold shadow-lg shadow-emerald-500/30 disabled:shadow-none hover:shadow-emerald-500/50 hover:scale-[1.02] duration-200 disabled:hover:scale-100"
                   >
-                    {connectionStatus === 'connecting' ? (
+                    {status === 'CONNECTING' ? (
                       <span className="flex items-center justify-center gap-2">
                         <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                         Connecting...
@@ -229,43 +207,9 @@ export function HomeScreen({ connectionStatus, onConnect, onAcceptConnection, on
               </div>
             </div>
 
-            {/* Recent Connections - Glass Card */}
-            <div className="rounded-3xl p-8 backdrop-blur-2xl bg-gradient-to-br from-white/10 to-white/[0.03] border border-white/20 shadow-2xl">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold">Recent Connections</h2>
-                <div className="px-3 py-1 rounded-lg bg-blue-500/20 backdrop-blur-xl border border-blue-400/30 text-xs font-semibold text-blue-400">
-                  {recentConnections.length} saved
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                {recentConnections.map((conn) => (
-                  <button
-                    key={conn.id}
-                    onClick={() => onConnect(conn.deviceId)}
-                    className="w-full p-5 backdrop-blur-xl bg-black/20 hover:bg-white/10 border border-white/10 hover:border-white/30 rounded-xl transition-all text-left group hover:scale-[1.02] duration-200 shadow-lg hover:shadow-xl"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="font-semibold text-sm mb-1.5 group-hover:text-cyan-400 transition-colors">
-                          {conn.deviceName}
-                        </div>
-                        <div className="text-xs text-gray-500 flex items-center gap-2">
-                          <span className="px-2 py-0.5 rounded bg-white/5 border border-white/10 font-mono">
-                            {conn.deviceId}
-                          </span>
-                          <span>•</span>
-                          <span>{conn.lastConnected}</span>
-                        </div>
-                      </div>
-                      <div className="text-xs text-gray-600 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 font-medium">
-                        {conn.duration}
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
+            {/* Placeholder for Recent Connections or other info if needed, or just allow the layout to breathe. 
+                For now, we remove the dummy recent connections to avoid clutter with fake data.
+             */}
           </div>
         </div>
       </div>

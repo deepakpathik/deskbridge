@@ -7,8 +7,8 @@ import { MobileHomeScreen } from './features/home/MobileHomeScreen';
 import { MobileLiveSessionScreen } from './features/session/MobileLiveSessionScreen';
 import { MobileSettingsScreen } from './features/settings/MobileSettingsScreen';
 import { useIsMobile } from './hooks/useIsMobile';
+import { useAppStore } from './store/useAppStore';
 
-export type ConnectionStatus = 'online' | 'connecting' | 'connected' | 'offline';
 export type Screen = 'home' | 'session' | 'settings';
 
 export interface Connection {
@@ -20,21 +20,12 @@ export interface Connection {
 }
 
 export default function App() {
-  const [currentScreen, setCurrentScreen] = useState<Screen>('home');
-  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('online');
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [showApprovalPopup, setShowApprovalPopup] = useState(false);
   const [incomingConnection, setIncomingConnection] = useState<string | null>(null);
   const isMobile = useIsMobile();
 
-  const handleConnect = (_deviceId: string) => {
-    setConnectionStatus('connecting');
-    setConnectionStatus('connecting');
-
-    setTimeout(() => {
-      setConnectionStatus('connected');
-      setCurrentScreen('session');
-    }, 2000);
-  };
+  const { status, setStatus, disconnect } = useAppStore();
 
   const handleAcceptConnection = () => {
     setIncomingConnection('Device #847291');
@@ -43,8 +34,7 @@ export default function App() {
 
   const handleApprove = () => {
     setShowApprovalPopup(false);
-    setConnectionStatus('connected');
-    setCurrentScreen('session');
+    setStatus('IN_SESSION');
   };
 
   const handleDeny = () => {
@@ -53,17 +43,26 @@ export default function App() {
   };
 
   const handleDisconnect = () => {
-    setConnectionStatus('online');
-    setCurrentScreen('home');
+    disconnect();
   };
 
   const handleOpenSettings = () => {
-    setCurrentScreen('settings');
+    setIsSettingsOpen(true);
   };
 
   const handleCloseSettings = () => {
-    setCurrentScreen('home');
+    setIsSettingsOpen(false);
   };
+
+  // Determine current view based on Store Status and Local Settings State
+  let CurrentView;
+  if (isSettingsOpen) {
+    CurrentView = isMobile ? MobileSettingsScreen : SettingsScreen;
+  } else if (status === 'IN_SESSION') {
+    CurrentView = isMobile ? MobileLiveSessionScreen : LiveSessionScreen;
+  } else {
+    CurrentView = isMobile ? MobileHomeScreen : HomeScreen;
+  }
 
   return (
     <div className="w-full h-screen bg-gradient-to-br from-[#0a0d14] via-[#1a1625] to-[#0f1419] text-white overflow-hidden relative">
@@ -74,48 +73,18 @@ export default function App() {
       </div>
 
       <div className="relative z-10 w-full h-full">
-        {isMobile ? (
-          <>
-            {currentScreen === 'home' && (
-              <MobileHomeScreen
-                connectionStatus={connectionStatus}
-                onConnect={handleConnect}
-                onAcceptConnection={handleAcceptConnection}
-                onOpenSettings={handleOpenSettings}
-              />
-            )}
-
-            {currentScreen === 'session' && (
-              <MobileLiveSessionScreen
-                onDisconnect={handleDisconnect}
-              />
-            )}
-
-            {currentScreen === 'settings' && (
-              <MobileSettingsScreen onClose={handleCloseSettings} />
-            )}
-          </>
+        {/* Render the determined view. We pass common props, 
+            though specific components might ignore some. 
+            We'll refine this as we refactor child components. */}
+        {status === 'IN_SESSION' && !isSettingsOpen ? (
+          <CurrentView onDisconnect={handleDisconnect} />
+        ) : isSettingsOpen ? (
+          <CurrentView onClose={handleCloseSettings} />
         ) : (
-          <>
-            {currentScreen === 'home' && (
-              <HomeScreen
-                connectionStatus={connectionStatus}
-                onConnect={handleConnect}
-                onAcceptConnection={handleAcceptConnection}
-                onOpenSettings={handleOpenSettings}
-              />
-            )}
-
-            {currentScreen === 'session' && (
-              <LiveSessionScreen
-                onDisconnect={handleDisconnect}
-              />
-            )}
-
-            {currentScreen === 'settings' && (
-              <SettingsScreen onClose={handleCloseSettings} />
-            )}
-          </>
+          <CurrentView
+            onAcceptConnection={handleAcceptConnection}
+            onOpenSettings={handleOpenSettings}
+          />
         )}
 
         {showApprovalPopup && (

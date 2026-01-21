@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useAppStore } from '../../store/useAppStore';
 import {
   Monitor,
   Maximize,
@@ -27,6 +28,8 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
   const [latency, setLatency] = useState(24);
   const [fps, setFps] = useState(60);
   const [bandwidth, setBandwidth] = useState(4.2);
+
+  const { remoteDeviceId } = useAppStore();
 
 
   useEffect(() => {
@@ -205,8 +208,8 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
               <button
                 onClick={() => setMouseControl(!mouseControl)}
                 className={`p-4 rounded-xl transition-all duration-200 ${mouseControl
-                    ? 'bg-gradient-to-br from-blue-600 to-cyan-600 text-white shadow-lg shadow-blue-500/30 scale-105'
-                    : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white backdrop-blur-xl border border-white/10'
+                  ? 'bg-gradient-to-br from-blue-600 to-cyan-600 text-white shadow-lg shadow-blue-500/30 scale-105'
+                  : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white backdrop-blur-xl border border-white/10'
                   }`}
                 title="Mouse Control"
               >
@@ -216,8 +219,8 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
               <button
                 onClick={() => setKeyboardControl(!keyboardControl)}
                 className={`p-4 rounded-xl transition-all duration-200 ${keyboardControl
-                    ? 'bg-gradient-to-br from-blue-600 to-cyan-600 text-white shadow-lg shadow-blue-500/30 scale-105'
-                    : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white backdrop-blur-xl border border-white/10'
+                  ? 'bg-gradient-to-br from-blue-600 to-cyan-600 text-white shadow-lg shadow-blue-500/30 scale-105'
+                  : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white backdrop-blur-xl border border-white/10'
                   }`}
                 title="Keyboard Control"
               >
@@ -229,8 +232,8 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
               <button
                 onClick={() => setAudioEnabled(!audioEnabled)}
                 className={`p-4 rounded-xl backdrop-blur-xl border border-white/10 transition-all duration-200 ${audioEnabled
-                    ? 'bg-white/5 hover:bg-white/10 text-white'
-                    : 'bg-red-500/20 text-red-400 hover:bg-red-500/30 border-red-500/30'
+                  ? 'bg-white/5 hover:bg-white/10 text-white'
+                  : 'bg-red-500/20 text-red-400 hover:bg-red-500/30 border-red-500/30'
                   }`}
                 title="Audio"
               >
@@ -272,7 +275,7 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
           <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse shadow-lg shadow-emerald-400/50"></div>
           <div className="text-xs">
             <span className="text-gray-400">Connected to:</span>
-            <span className="text-white font-semibold ml-2">MacBook Pro - Design Team</span>
+            <span className="text-white font-semibold ml-2">{remoteDeviceId || 'Unknown Device'}</span>
           </div>
         </div>
       </div>
