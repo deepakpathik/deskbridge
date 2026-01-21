@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { HomeScreen } from './features/home/HomeScreen';
 import { LiveSessionScreen } from './features/session/LiveSessionScreen';
 import { ConnectionApprovalPopup } from './features/connection/ConnectionApprovalPopup';
@@ -25,7 +25,11 @@ export default function App() {
   const [incomingConnection, setIncomingConnection] = useState<string | null>(null);
   const isMobile = useIsMobile();
 
-  const { status, setStatus, disconnect } = useAppStore();
+  const { status, setStatus, disconnect, initializeSocket } = useAppStore();
+
+  useEffect(() => {
+    initializeSocket();
+  }, []);
 
   const handleAcceptConnection = () => {
     setIncomingConnection('Device #847291');
