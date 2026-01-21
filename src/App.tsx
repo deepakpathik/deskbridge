@@ -49,15 +49,43 @@ export default function App() {
     setIsSettingsOpen(false);
   };
 
-  // Determine current view based on Store Status and Local Settings State
-  let CurrentView;
-  if (isSettingsOpen) {
-    CurrentView = isMobile ? MobileSettingsScreen : SettingsScreen;
-  } else if (status === 'IN_SESSION') {
-    CurrentView = isMobile ? MobileLiveSessionScreen : LiveSessionScreen;
-  } else {
-    CurrentView = isMobile ? MobileHomeScreen : HomeScreen;
-  }
+  // Render explicit components based on state to ensure type safety
+  const renderContent = () => {
+    if (isSettingsOpen) {
+      if (isMobile) {
+        return <MobileSettingsScreen onClose={handleCloseSettings} />;
+      }
+      return <SettingsScreen onClose={handleCloseSettings} />;
+    }
+
+    if (status === 'IN_SESSION') {
+      if (isMobile) {
+        return <MobileLiveSessionScreen onDisconnect={handleDisconnect} />
+      }
+      return <LiveSessionScreen onDisconnect={handleDisconnect} />;
+    }
+
+    // Default: Home Screen
+    if (isMobile) {
+      return (
+        <MobileHomeScreen
+          onAcceptConnection={() => {
+            console.log("Accept connection clicked - awaiting incoming requests");
+          }}
+          onOpenSettings={handleOpenSettings}
+        />
+      );
+    }
+
+    return (
+      <HomeScreen
+        onAcceptConnection={() => {
+          console.log("Accept connection clicked - awaiting incoming requests");
+        }}
+        onOpenSettings={handleOpenSettings}
+      />
+    );
+  };
 
   return (
     <div className="w-full h-screen bg-gradient-to-br from-[#0a0d14] via-[#1a1625] to-[#0f1419] text-white overflow-hidden relative">
@@ -68,27 +96,7 @@ export default function App() {
       </div>
 
       <div className="relative z-10 w-full h-full">
-        {/* Render the determined view. We pass common props, 
-            though specific components might ignore some. 
-            We'll refine this as we refactor child components. */}
-        {status === 'IN_SESSION' && !isSettingsOpen ? (
-          <CurrentView onDisconnect={handleDisconnect} />
-        ) : isSettingsOpen ? (
-          <CurrentView onClose={handleCloseSettings} />
-        ) : (
-          <CurrentView
-            onAcceptConnection={() => {
-              // For manually triggering "Accept Connection" button (maybe debug or reverse connect?)
-              // For now, let's keep it but maybe it should just set state to IDLE or allow reverse connection?
-              // The "Accept Connection" button usually meant "Make me discoverable/ready".
-              // In our socket logic, we are always ready once connected. 
-              // Maybe we can repurpose this button or remove connection logic from it if it was dummy.
-              // For safety: no-op or specific debug action.
-              console.log("Accept connection clicked - awaiting incoming requests");
-            }}
-            onOpenSettings={handleOpenSettings}
-          />
-        )}
+        {renderContent()}
 
         {status === 'INCOMING_REQUEST' && (
           <ConnectionApprovalPopup
