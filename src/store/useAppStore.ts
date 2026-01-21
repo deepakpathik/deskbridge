@@ -33,6 +33,20 @@ export const useAppStore = create<AppStore>((set) => ({
         socket.on('disconnect', () => {
             set({ isSocketConnected: false });
         });
+
+        socket.on('room-joined', (roomId) => {
+            console.log('Successfully joined room:', roomId);
+            set({ status: 'CONNECTED' });
+        });
+
+        socket.on('user-connected', (userId) => {
+            console.log('Remote user connected:', userId);
+            set({ status: 'IN_SESSION', remoteDeviceId: userId }); // Or however we want to track the remote ID
+        });
+
+        socket.on('disconnect', () => {
+            set({ isSocketConnected: false });
+        });
     },
 
     setStatus: (status) => set({ status }),
