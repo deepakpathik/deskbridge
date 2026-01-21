@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAppStore } from '../../store/useAppStore';
+import { VideoPreview } from '../../components/VideoPreview';
+import { webrtcService } from '../../services/webrtcService';
 import {
   Monitor,
   Maximize,
@@ -12,7 +14,7 @@ import {
   PhoneOff,
   Activity,
   Wifi,
-  Signal
+  Cast
 } from 'lucide-react';
 
 interface LiveSessionScreenProps {
@@ -28,9 +30,17 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
   const [latency, setLatency] = useState(24);
   const [fps, setFps] = useState(60);
   const [bandwidth, setBandwidth] = useState(4.2);
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
 
   const { remoteDeviceId } = useAppStore();
 
+  useEffect(() => {
+    // Clean up stream on unmount
+    return () => {
+      webrtcService.stopScreenShare();
+      setLocalStream(null);
+    };
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -62,6 +72,15 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
     };
   }, [isFullscreen]);
 
+  const handleStartShare = async () => {
+    try {
+      const stream = await webrtcService.startScreenShare();
+      setLocalStream(stream);
+    } catch (error) {
+      console.error("Failed to share screen", error);
+    }
+  };
+
   const getQualityColor = () => {
     if (latency < 30 && fps > 55) return 'text-emerald-400';
     if (latency < 50 && fps > 45) return 'text-amber-400';
@@ -71,88 +90,51 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
   return (
     <div className="w-full h-full relative bg-black">
       <div className="w-full h-full relative overflow-hidden">
-        <div className="w-full h-full bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950 flex items-center justify-center">
-          <div className="w-full h-full p-8 relative">
-            <div className="absolute inset-0 opacity-10"
-              style={{
-                backgroundImage: `
+        {localStream ? (
+          <div className="w-full h-full flex items-center justify-center bg-black">
+            <VideoPreview stream={localStream} className="w-full h-full object-contain" />
+          </div>
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950 flex items-center justify-center">
+            <div className="w-full h-full p-8 relative">
+              <div className="absolute inset-0 opacity-10"
+                style={{
+                  backgroundImage: `
                   linear-gradient(rgba(100, 149, 237, 0.15) 1px, transparent 1px),
                   linear-gradient(90deg, rgba(100, 149, 237, 0.15) 1px, transparent 1px)
                 `,
-                backgroundSize: '50px 50px'
-              }}
-            />
+                  backgroundSize: '50px 50px'
+                }}
+              />
 
-            <div className="relative w-full h-full">
-              <div className="absolute top-12 left-12 w-[600px] h-[400px] bg-[#1e1e1e] rounded-lg shadow-2xl border border-white/10 overflow-hidden">
-                <div className="h-8 bg-[#2d2d2d] flex items-center px-4 gap-2">
-                  <div className="flex gap-1.5">
-                    <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
-                    <div className="w-3 h-3 rounded-full bg-amber-500/80"></div>
-                    <div className="w-3 h-3 rounded-full bg-emerald-500/80"></div>
+              <div className="relative w-full h-full flex flex-col items-center justify-center gap-6">
+                <div className="p-8 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl text-center space-y-4 shadow-2xl">
+                  <div className="w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center border border-white/10">
+                    <Cast className="w-10 h-10 text-blue-400" />
                   </div>
-                  <span className="text-xs text-gray-400 ml-2">main.tsx</span>
-                </div>
-                <div className="p-4 font-mono text-xs text-gray-300 space-y-1">
-                  <div><span className="text-purple-400">import</span> <span className="text-blue-400">React</span> <span className="text-purple-400">from</span> <span className="text-green-400">'react'</span>;</div>
-                  <div><span className="text-purple-400">import</span> {'{ WebRTC }'} <span className="text-purple-400">from</span> <span className="text-green-400">'./webrtc'</span>;</div>
-                  <div className="h-2"></div>
-                  <div><span className="text-purple-400">function</span> <span className="text-yellow-400">App</span>() {'{'}</div>
-                  <div className="pl-4"><span className="text-purple-400">const</span> [stream, setStream] = <span className="text-blue-400">useState</span>(<span className="text-orange-400">null</span>);</div>
-                  <div className="pl-4"><span className="text-purple-400">return</span> {'<'}<span className="text-blue-400">VideoStream</span> stream={'{stream}'} /{'>'}</div>
-                  <div>{'}'}</div>
-                </div>
-              </div>
-
-              <div className="absolute top-32 right-24 w-[500px] h-[350px] bg-white rounded-lg shadow-2xl border border-white/10 overflow-hidden">
-                <div className="h-10 bg-gray-100 flex items-center px-4 gap-2 border-b border-gray-200">
-                  <div className="flex gap-2">
-                    <div className="w-3 h-3 rounded-full bg-red-400"></div>
-                    <div className="w-3 h-3 rounded-full bg-amber-400"></div>
-                    <div className="w-3 h-3 rounded-full bg-emerald-400"></div>
+                  <div>
+                    <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">Start Sharing</h2>
+                    <p className="text-gray-400 mt-2">Share your screen with the connected device</p>
                   </div>
-                  <div className="flex-1 mx-4 bg-white rounded px-3 py-1 text-xs text-gray-600 border border-gray-200">
-                    deskbridge.app/dashboard
-                  </div>
-                </div>
-                <div className="p-6 bg-gradient-to-br from-blue-50 to-purple-50">
-                  <div className="space-y-3">
-                    <div className="h-8 bg-white rounded shadow-sm"></div>
-                    <div className="h-32 bg-white rounded shadow-sm"></div>
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="h-24 bg-white rounded shadow-sm"></div>
-                      <div className="h-24 bg-white rounded shadow-sm"></div>
-                      <div className="h-24 bg-white rounded shadow-sm"></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="absolute bottom-12 left-24 w-[550px] h-[200px] bg-black/90 rounded-lg shadow-2xl border border-emerald-500/30 overflow-hidden">
-                <div className="h-7 bg-gray-900 flex items-center px-4 gap-2 border-b border-emerald-500/20">
-                  <span className="text-xs text-emerald-400">terminal</span>
-                </div>
-                <div className="p-4 font-mono text-xs text-emerald-400 space-y-1">
-                  <div>$ npm run dev</div>
-                  <div className="text-gray-500">Starting development server...</div>
-                  <div className="text-gray-500">WebRTC connection established</div>
-                  <div className="text-gray-500">Stream active: 1920x1080 @ 60fps</div>
-                  <div className="flex">
-                    <span>$ </span>
-                    <span className="animate-pulse">_</span>
-                  </div>
+                  <button
+                    onClick={handleStartShare}
+                    className="px-8 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold shadow-lg shadow-blue-500/20 hover:scale-105 transition-all"
+                  >
+                    Share Screen
+                  </button>
+                  {remoteDeviceId && <p className="text-xs text-gray-500 pt-2">Connected to: {remoteDeviceId}</p>}
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
 
         <div className="absolute top-6 left-6 flex items-center gap-3 px-5 py-3 backdrop-blur-2xl bg-red-500/20 rounded-2xl border border-red-500/50 shadow-2xl shadow-red-500/20">
           <div className="relative flex items-center justify-center">
-            <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse shadow-lg shadow-red-500/50"></div>
-            <div className="absolute w-3 h-3 bg-red-500 rounded-full animate-ping"></div>
+            <div className={`w-3 h-3 rounded-full shadow-lg ${localStream ? 'bg-red-500 animate-pulse shadow-red-500/50' : 'bg-gray-500'}`}></div>
+            {localStream && <div className="absolute w-3 h-3 bg-red-500 rounded-full animate-ping"></div>}
           </div>
-          <span className="text-sm font-bold tracking-wide">LIVE STREAM</span>
+          <span className="text-sm font-bold tracking-wide">{localStream ? 'LIVE STREAM' : 'READY TO SHARE'}</span>
         </div>
 
         <div className="absolute top-6 right-6 backdrop-blur-2xl bg-black/40 rounded-2xl border border-white/20 shadow-2xl overflow-hidden">
@@ -249,10 +231,14 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
               </button>
 
               <button
-                className="p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-all backdrop-blur-xl border border-white/10 hover:border-white/20 hover:scale-105 duration-200"
-                title="Settings"
+                onClick={handleStartShare}
+                className={`p-4 rounded-xl backdrop-blur-xl border border-white/10 transition-all duration-200 ${localStream
+                  ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30 border-green-500/30'
+                  : 'bg-white/5 hover:bg-white/10 text-white'
+                  }`}
+                title={localStream ? "Sharing Screen" : "Start Sharing"}
               >
-                <Settings className="w-5 h-5" />
+                <Cast className="w-5 h-5" />
               </button>
 
               <div className="w-px h-10 bg-gradient-to-b from-transparent via-white/20 to-transparent mx-2"></div>
