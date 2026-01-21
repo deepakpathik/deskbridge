@@ -46,7 +46,10 @@ export const useAppStore = create<AppStore>((set, get) => ({
 
         socket.on('room-joined', (roomId) => {
             console.log('Successfully joined room:', roomId);
-            set({ status: 'CONNECTED' });
+            const { myDeviceId } = get();
+            if (roomId !== myDeviceId) {
+                set({ status: 'CONNECTED' });
+            }
         });
 
         socket.on('user-connected', (userId) => {
