@@ -96,6 +96,18 @@ class SocketService {
             this.socket.on('ice-candidate', callback);
         }
     }
+
+    public sendCallAccepted(roomId: string) {
+        if (this.socket) {
+            this.socket.emit('call-accepted', { roomId });
+        }
+    }
+
+    public onCallAccepted(callback: () => void) {
+        if (this.socket) {
+            this.socket.on('call-accepted', callback);
+        }
+    }
 }
 
 export const socketService = new SocketService();

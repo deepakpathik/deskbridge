@@ -29,6 +29,7 @@ declare global {
       platform: string;
       checkPermissions: () => Promise<{ screen: string; mic: string }>;
       requestMediaAccess: (mediaType: 'microphone' | 'camera') => Promise<boolean>;
+      performControlAction: (action: any) => void;
     };
   }
 }

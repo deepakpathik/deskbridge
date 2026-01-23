@@ -16,6 +16,12 @@ const handleWebRTCEvents = (io, socket) => {
         const { roomId, candidate } = payload;
         socket.to(roomId).emit('ice-candidate', candidate);
     });
+
+    socket.on('call-accepted', (payload) => {
+        const { roomId } = payload;
+        socket.to(roomId).emit('call-accepted');
+        console.log(`Call accepted in room ${roomId}`);
+    });
 };
 
 module.exports = { handleWebRTCEvents };

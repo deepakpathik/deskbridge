@@ -6,6 +6,9 @@ export class WebRTCService {
     private localStream: MediaStream | null = null;
     private peerConnection: RTCPeerConnection | null = null;
 
+    private dataChannel: RTCDataChannel | null = null;
+    private onControlDataCallback: ((data: any) => void) | null = null;
+
     /**
      * Captures the system screen/audio stream.
      * In a browser/Electron environment, this triggers the OS screen picker.
@@ -43,6 +46,22 @@ export class WebRTCService {
         }
     }
 
+    public cleanup() {
+        this.stopScreenShare();
+        if (this.peerConnection) {
+            this.peerConnection.close();
+            this.peerConnection = null;
+        }
+        if (this.dataChannel) {
+            this.dataChannel.close();
+            this.dataChannel = null;
+        }
+        // Reset callbacks to prevent memory leaks if service instance persists
+        this.onIceCandidateCallback = null;
+        this.onTrackCallback = null;
+        this.onControlDataCallback = null;
+    }
+
     public createPeerConnection(): RTCPeerConnection {
         const configuration: RTCConfiguration = {
             iceServers: [
@@ -57,6 +76,7 @@ export class WebRTCService {
         this.peerConnection.onicecandidate = (event) => {
             if (event.candidate) {
                 this.onIceCandidateCallback?.(event.candidate);
+                console.log('ICE candidate generated', event.candidate);
             }
         };
 
@@ -65,7 +85,14 @@ export class WebRTCService {
             console.log('Received remote track', event.streams);
             if (event.streams && event.streams[0]) {
                 this.onTrackCallback?.(event.streams[0]);
+                console.log('Remote track received', event.streams[0]);
             }
+        };
+
+        // Handle Data Channel (Receiver/Host side)
+        this.peerConnection.ondatachannel = (event) => {
+            console.log('Received data channel');
+            this.setupDataChannel(event.channel);
         };
 
         this.peerConnection.onconnectionstatechange = () => {
@@ -73,6 +100,29 @@ export class WebRTCService {
         };
 
         return this.peerConnection;
+    }
+
+    // Data Channel Logic
+    private setupDataChannel(channel: RTCDataChannel) {
+        this.dataChannel = channel;
+        this.dataChannel.onopen = () => {
+            console.log('Data channel opened');
+        };
+        this.dataChannel.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            this.onControlDataCallback?.(data);
+            console.log('Data received', data);
+        };
+    }
+
+    public onControlData(callback: (data: any) => void) {
+        this.onControlDataCallback = callback;
+    }
+
+    public sendControlData(data: any) {
+        if (this.dataChannel && this.dataChannel.readyState === 'open') {
+            this.dataChannel.send(JSON.stringify(data));
+        }
     }
 
     public onTrack(callback: (stream: MediaStream) => void) {
@@ -98,15 +148,27 @@ export class WebRTCService {
 
 
     public async createOffer(): Promise<RTCSessionDescriptionInit> {
-        if (!this.peerConnection) {
+        if (!this.peerConnection || this.peerConnection.connectionState === 'closed' || this.peerConnection.signalingState === 'closed') {
             this.createPeerConnection();
+        }
+
+        // Create Data Channel (Caller/Guest side)
+        if (this.peerConnection) {
+            // Only create if it doesn't exist? Or just create a new one?
+            // Usually only one side creates it.
+            const channel = this.peerConnection.createDataChannel("control");
+            this.setupDataChannel(channel);
         }
 
         // Add local stream tracks to PeerConnection
         if (this.localStream && this.peerConnection) {
             this.localStream.getTracks().forEach(track => {
                 if (this.peerConnection && this.localStream) {
-                    this.peerConnection.addTrack(track, this.localStream);
+                    const senders = this.peerConnection.getSenders();
+                    const alreadyAdded = senders.some(s => s.track === track);
+                    if (!alreadyAdded) {
+                        this.peerConnection.addTrack(track, this.localStream);
+                    }
                 }
             });
         }
@@ -121,7 +183,7 @@ export class WebRTCService {
     }
 
     public async handleOffer(offer: RTCSessionDescriptionInit): Promise<RTCSessionDescriptionInit> {
-        if (!this.peerConnection) {
+        if (!this.peerConnection || this.peerConnection.connectionState === 'closed' || this.peerConnection.signalingState === 'closed') {
             this.createPeerConnection();
         }
 

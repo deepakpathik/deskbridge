@@ -66,6 +66,7 @@ export function HomeScreen({ onOpenSettings }: HomeScreenProps) {
     switch (status) {
       case 'CONNECTED': return '#10b981'; // Emerald-500
       case 'CONNECTING': return '#f59e0b'; // Amber-500
+      case 'WAITING_FOR_APPROVAL': return '#f59e0b'; // Amber-500
       case 'IN_SESSION': return '#3b82f6'; // Blue-500
       case 'DISCONNECTED': return '#ef4444'; // Red-500
       case 'IDLE': return isSocketConnected ? '#10b981' : '#ef4444';
@@ -77,6 +78,7 @@ export function HomeScreen({ onOpenSettings }: HomeScreenProps) {
     switch (status) {
       case 'CONNECTED': return 'Online';
       case 'CONNECTING': return 'Connecting...';
+      case 'WAITING_FOR_APPROVAL': return 'Waiting for Host...';
       case 'IN_SESSION': return 'Active Session';
       case 'DISCONNECTED': return 'Disconnected';
       case 'IDLE': return isSocketConnected ? 'Online' : 'Offline';
@@ -212,17 +214,17 @@ export function HomeScreen({ onOpenSettings }: HomeScreenProps) {
                   </div>
 
                   <button
-                    onClick={status === 'CONNECTING' ? cancelConnection : handleConnect}
-                    disabled={!deviceIdInput.trim() && status !== 'CONNECTING'}
+                    onClick={(status === 'CONNECTING' || status === 'WAITING_FOR_APPROVAL') ? cancelConnection : handleConnect}
+                    disabled={!deviceIdInput.trim() && (status !== 'CONNECTING' && status !== 'WAITING_FOR_APPROVAL')}
                     className={`px-8 rounded-xl font-semibold transition-all flex items-center gap-2 shadow-lg duration-200 text-sm
-                        ${status === 'CONNECTING'
+                        ${(status === 'CONNECTING' || status === 'WAITING_FOR_APPROVAL')
                         ? 'bg-red-500/10 text-red-500 border-2 border-red-500/40 hover:bg-red-500/20'
                         : 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white shadow-blue-500/30'
                       }
                         disabled:opacity-50 disabled:cursor-not-allowed
                       `}
                   >
-                    {status === 'CONNECTING' ? (
+                    {(status === 'CONNECTING' || status === 'WAITING_FOR_APPROVAL') ? (
                       <>Cancel</>
                     ) : (
                       <>

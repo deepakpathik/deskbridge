@@ -90,6 +90,51 @@ app.on('ready', () => {
         await shell.openExternal(`x-apple.systempreferences:com.apple.preference.security?${anchor}`);
     });
 
+    ipcMain.handle('remote-control', async (event, action) => {
+        try {
+            // Lazy load robotjs to avoid startup crashes if not built correctly
+            const robot = require('robotjs');
+            const { width: screenWidth, height: screenHeight } = robot.getScreenSize();
+
+            switch (action.type) {
+                case 'mousemove':
+                    // action.x and action.y should be normalized (0-1)
+                    if (action.x >= 0 && action.x <= 1 && action.y >= 0 && action.y <= 1) {
+                        const x = action.x * screenWidth;
+                        const y = action.y * screenHeight;
+                        robot.moveMouse(x, y);
+                    }
+                    break;
+                case 'mousedown':
+                    robot.mouseToggle('down', action.button || 'left');
+                    break;
+                case 'mouseup':
+                    robot.mouseToggle('up', action.button || 'left');
+                    break;
+                case 'click':
+                    robot.mouseClick(action.button || 'left', action.double || false);
+                    break;
+                case 'scroll':
+                    robot.scrollMouse(action.dx || 0, action.dy || 0);
+                    break;
+                case 'keydown':
+                    // Basic key mapping required. action.key should be robotjs compatible.
+                    // For now, support simple characters and some special keys.
+                    try {
+                        robot.keyTap(action.key.toLowerCase(), action.modifiers);
+                    } catch (e) {
+                        console.log("Unsupported key:", action.key);
+                    }
+                    break;
+            }
+            return true;
+        } catch (error) {
+            console.error('Remote control error:', error);
+            // If robotjs is missing, this handles graceful fallback (no-op)
+            return false;
+        }
+    });
+
     createWindow();
 });
 

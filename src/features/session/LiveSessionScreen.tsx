@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { VideoPreview } from '../../components/VideoPreview';
 import { webrtcService } from '../../services/webrtcService';
+import { socketService } from '../../services/socketService';
 import {
   Monitor,
   Maximize,
   Minimize,
-  Settings,
   Volume2,
   VolumeX,
   MousePointer,
@@ -35,27 +35,52 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
   const [fps, setFps] = useState(60);
   const [bandwidth, setBandwidth] = useState(4.2);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const { remoteDeviceId } = useAppStore();
+  const { remoteDeviceId, isCaller } = useAppStore();
 
   useEffect(() => {
-    // Clean up stream on unmount
+    // Host Logic: Handle incoming control data
+    webrtcService.onControlData((action) => {
+      if (window.electronAPI?.performControlAction) {
+        window.electronAPI.performControlAction(action);
+      }
+    });
+
+    // Guest Logic: Handle incoming remote stream
+    webrtcService.onTrack((stream) => {
+      setRemoteStream(stream);
+    });
+
+    // Clean up
     return () => {
-      webrtcService.stopScreenShare();
+      webrtcService.cleanup();
       setLocalStream(null);
+      setRemoteStream(null);
     };
   }, []);
-
-  // ... (latency effect) ...
-
-  // ... (mouse move effect) ...
 
   const handleStartShare = async () => {
     setError(null);
     try {
       const stream = await webrtcService.startScreenShare();
       setLocalStream(stream);
+
+      // Add tracks to the peer connection
+      const pc = webrtcService.getPeerConnection();
+      if (pc) {
+        stream.getTracks().forEach(track => {
+          pc.addTrack(track, stream);
+        });
+
+        // Trigger Renegotiation manually by creating and sending a new offer
+        console.log("Creating new offer for screen share...");
+        const offer = await webrtcService.createOffer();
+        if (remoteDeviceId) {
+          socketService.sendOffer(remoteDeviceId, offer);
+        }
+      }
     } catch (err: any) {
       console.error("Failed to share screen", err);
       if (err.name === 'NotAllowedError') {
@@ -72,15 +97,63 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
     return 'text-red-400';
   };
 
+  // Remote Control Handlers (Guest Side)
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!mouseControl || !remoteStream) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+    webrtcService.sendControlData({ type: 'mousemove', x, y });
+  };
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!mouseControl || !remoteStream) return;
+    webrtcService.sendControlData({ type: 'mousedown', button: e.button === 0 ? 'left' : 'right' });
+  };
+
+  const handleMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!mouseControl || !remoteStream) return;
+    webrtcService.sendControlData({ type: 'mouseup', button: e.button === 0 ? 'left' : 'right' });
+  };
+
+  // Keyboard listener could be global or on div with tabindex
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!keyboardControl || !remoteStream) return;
+      // Basic mapping for now
+      let key = e.key;
+      if (key.length === 1) {
+        webrtcService.sendControlData({ type: 'keydown', key, modifiers: [] });
+      }
+    };
+
+    if (remoteStream) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [keyboardControl, remoteStream]);
+
+
+  const activeStream = isCaller ? remoteStream : localStream;
+
   return (
     <div className="w-full h-full relative bg-black">
       <div className="w-full h-full relative overflow-hidden">
-        {localStream ? (
-          <div className="w-full h-full flex items-center justify-center bg-black">
-            <VideoPreview stream={localStream} className="w-full h-full object-contain" />
+        {activeStream ? (
+          <div
+            className="w-full h-full flex items-center justify-center bg-black cursor-none"
+            onMouseMove={handleMouseMove}
+            onMouseDown={handleMouseDown}
+            onMouseUp={handleMouseUp}
+            onContextMenu={(e) => e.preventDefault()}
+          >
+            <VideoPreview stream={activeStream} className="w-full h-full object-contain pointer-events-none" />
           </div>
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950 flex items-center justify-center">
+            {/* ... Existing Placeholder for Host ... */}
             <div className="w-full h-full p-8 relative">
               <div className="absolute inset-0 opacity-10"
                 style={{
@@ -93,22 +166,30 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
               />
 
               <div className="relative w-full h-full flex flex-col items-center justify-center gap-6">
-                <div className="p-8 rounded-3xl bg-white/5 border-2 border-white/30 backdrop-blur-xl text-center space-y-4 shadow-2xl">
-                  <div className="w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center border border-white/10">
-                    <Cast className="w-10 h-10 text-blue-400" />
+                {/* Only show Start Sharing for Host */}
+                {!isCaller ? (
+                  <div className="p-8 rounded-3xl bg-white/5 border-2 border-white/30 backdrop-blur-xl text-center space-y-4 shadow-2xl">
+                    <div className="w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center border border-white/10">
+                      <Cast className="w-10 h-10 text-blue-400" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">Start Sharing</h2>
+                      <p className="text-gray-400 mt-2">Share your screen with the connected device</p>
+                    </div>
+                    <button
+                      onClick={handleStartShare}
+                      className="px-8 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold shadow-lg shadow-blue-500/20 hover:scale-105 transition-all"
+                    >
+                      Share Screen
+                    </button>
+                    {remoteDeviceId && <p className="text-xs text-gray-500 pt-2">Connected to: {remoteDeviceId}</p>}
                   </div>
-                  <div>
-                    <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">Start Sharing</h2>
-                    <p className="text-gray-400 mt-2">Share your screen with the connected device</p>
+                ) : (
+                  <div className="flex flex-col items-center justify-center gap-4">
+                    <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                    <p className="text-blue-400 font-medium">Waiting for video stream...</p>
                   </div>
-                  <button
-                    onClick={handleStartShare}
-                    className="px-8 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold shadow-lg shadow-blue-500/20 hover:scale-105 transition-all"
-                  >
-                    Share Screen
-                  </button>
-                  {remoteDeviceId && <p className="text-xs text-gray-500 pt-2">Connected to: {remoteDeviceId}</p>}
-                </div>
+                )}
               </div>
             </div>
           </div>
@@ -116,12 +197,13 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
 
         <div className="absolute top-6 left-6 flex items-center gap-3 px-5 py-3 backdrop-blur-2xl bg-red-500/20 rounded-2xl border-2 border-red-500/50 shadow-2xl shadow-red-500/20">
           <div className="relative flex items-center justify-center">
-            <div className={`w-3 h-3 rounded-full shadow-lg ${localStream ? 'bg-red-500 animate-pulse shadow-red-500/50' : 'bg-gray-500'}`}></div>
-            {localStream && <div className="absolute w-3 h-3 bg-red-500 rounded-full animate-ping"></div>}
+            <div className={`w-3 h-3 rounded-full shadow-lg ${activeStream ? 'bg-red-500 animate-pulse shadow-red-500/50' : 'bg-gray-500'}`}></div>
+            {activeStream && <div className="absolute w-3 h-3 bg-red-500 rounded-full animate-ping"></div>}
           </div>
-          <span className="text-sm font-bold tracking-wide">{localStream ? 'LIVE STREAM' : 'READY TO SHARE'}</span>
+          <span className="text-sm font-bold tracking-wide">{activeStream ? 'LIVE STREAM' : (isCaller ? 'WAITING' : 'READY TO SHARE')}</span>
         </div>
 
+        {/* Existing Stats Panel ... */}
         <div className="absolute top-6 right-6 backdrop-blur-2xl bg-black/40 rounded-2xl border-2 border-white/30 shadow-2xl overflow-hidden">
           <div className="px-6 py-4">
             <div className="flex items-center gap-5 text-xs">
@@ -215,16 +297,19 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
                 {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
               </button>
 
-              <button
-                onClick={handleStartShare}
-                className={`p-4 rounded-xl backdrop-blur-xl border-2 border-white/30 transition-all duration-200 ${localStream
-                  ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30 border-green-500/30'
-                  : 'bg-white/5 hover:bg-white/10 text-white'
-                  }`}
-                title={localStream ? "Sharing Screen" : "Start Sharing"}
-              >
-                <Cast className="w-5 h-5" />
-              </button>
+              {/* Only show "Share Screen" button in toolbar if I am Host */}
+              {!isCaller && (
+                <button
+                  onClick={handleStartShare}
+                  className={`p-4 rounded-xl backdrop-blur-xl border-2 border-white/30 transition-all duration-200 ${localStream
+                    ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30 border-green-500/30'
+                    : 'bg-white/5 hover:bg-white/10 text-white'
+                    }`}
+                  title={localStream ? "Sharing Screen" : "Start Sharing"}
+                >
+                  <Cast className="w-5 h-5" />
+                </button>
+              )}
 
               <div className="w-1 h-10 bg-gradient-to-b from-transparent via-white/40 to-transparent mx-2 rounded-full"></div>
 
