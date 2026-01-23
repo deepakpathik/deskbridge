@@ -28,7 +28,8 @@ export class WebRTCService {
                     height: height ? { ideal: height } : undefined,
                     frameRate: frameRate ? { ideal: frameRate } : undefined,
                 },
-                audio: false
+                audio: true, // Request system audio
+                systemAudio: "include" // Explicitly request system audio (Chrome/Electron)
             } as any);
 
             this.localStream = stream;

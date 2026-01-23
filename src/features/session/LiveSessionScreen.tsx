@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { VideoPreview } from '../../components/VideoPreview';
 import { webrtcService } from '../../services/webrtcService';
@@ -99,9 +99,15 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
     return 'text-red-400';
   };
 
-  // Remote Control Handlers (Guest Side)
+  // Mouse throttling to prevent flooding (max 60fps)
+  const lastMouseTime = useRef(0);
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!mouseControl || !remoteStream) return;
+
+    const now = Date.now();
+    if (now - lastMouseTime.current < 16) return; // ~60fps cap
+    lastMouseTime.current = now;
+
     const rect = e.currentTarget.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width;
     const y = (e.clientY - rect.top) / rect.height;
@@ -118,14 +124,55 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
     webrtcService.sendControlData({ type: 'mouseup', button: e.button === 0 ? 'left' : 'right' });
   };
 
-  // Keyboard listener could be global or on div with tabindex
+  // RobotJS Key Mapping
+  const getRobotJSKey = (key: string): string | null => {
+    const map: { [key: string]: string } = {
+      'Backspace': 'backspace',
+      'Delete': 'delete',
+      'Enter': 'enter',
+      'Tab': 'tab',
+      'Escape': 'escape',
+      'ArrowUp': 'up',
+      'ArrowDown': 'down',
+      'ArrowLeft': 'left',
+      'ArrowRight': 'right',
+      'Home': 'home',
+      'End': 'end',
+      'PageUp': 'pageup',
+      'PageDown': 'pagedown',
+      ' ': 'space',
+      'Control': 'control', // Modifier, usually handled separately but good to have
+      'Alt': 'alt',
+      'Shift': 'shift',
+      'Meta': 'command'
+    };
+
+    if (map[key]) return map[key];
+
+    // For regular characters, robotjs usually takes lowercase
+    if (key.length === 1) return key.toLowerCase();
+
+    return null;
+  };
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!keyboardControl || !remoteStream) return;
-      // Basic mapping for now
-      let key = e.key;
-      if (key.length === 1) {
-        webrtcService.sendControlData({ type: 'keydown', key, modifiers: [] });
+
+      const robotKey = getRobotJSKey(e.key);
+      if (robotKey) {
+        // Collect modifiers
+        const modifiers = [];
+        if (e.ctrlKey) modifiers.push('control');
+        if (e.altKey) modifiers.push('alt');
+        if (e.shiftKey) modifiers.push('shift');
+        if (e.metaKey) modifiers.push('command');
+
+        webrtcService.sendControlData({
+          type: 'keydown',
+          key: robotKey,
+          modifiers: modifiers
+        });
       }
     };
 

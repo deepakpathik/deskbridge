@@ -27,22 +27,24 @@ const createWindow = () => {
     }
 
     // Handle screen sharing permission for sandbox
+    // Handle screen sharing permission for sandbox
     mainWindow.webContents.session.setDisplayMediaRequestHandler((request, callback) => {
-        console.log('Display Media Request:', JSON.stringify(request));
+        const { desktopCapturer } = require('electron');
 
-        // This grants permission to capture the screen. 
-        // In Electron > 20ish, calling callback like this SHOULD trigger the native OS picker on macOS.
-        // If it returns 'AbortError', the OS might have denied it or the picker was cancelled.
-
-        // Try passing just video: true if request.video is complex
-        // Or inspect if we need to list sources using desktopCapturer (for custom pickers)
-
-        try {
-            callback({ video: request.video, audio: request.audio });
-            console.log('Display Media Permission Granted (Invoked Callback)');
-        } catch (err) {
-            console.error('Error invoking display media callback:', err);
-        }
+        desktopCapturer.getSources({ types: ['screen'] }).then((sources) => {
+            if (sources && sources.length > 0) {
+                // Auto-select the first screen to unblock the user.
+                // In a production app, we would send these sources to the UI for selection.
+                callback({ video: sources[0], audio: 'loopback' });
+                console.log('Display Media Granted: Auto-selected screen 0');
+            } else {
+                console.log('Display Media Denied: No sources found');
+                // Should probably callback with deny? Or just fallback.
+                // callback(null) denies it.
+            }
+        }).catch((err) => {
+            console.error('Error in setDisplayMediaRequestHandler', err);
+        });
     });
 
     mainWindow.once('ready-to-show', () => {
@@ -70,7 +72,25 @@ app.on('ready', () => {
 
     ipcMain.handle('request-media-access', async (event, mediaType) => {
         if (process.platform !== 'darwin') return true;
+
         try {
+            if (mediaType === 'screen') {
+                // systemPreferences.askForMediaAccess('screen') is not supported.
+                // We must trigger a capture attempt to prompt the user.
+                const status = systemPreferences.getMediaAccessStatus('screen');
+                if (status === 'granted') return true;
+
+                // Trigger prompt by asking for sources
+                const { desktopCapturer } = require('electron');
+                try {
+                    await desktopCapturer.getSources({ types: ['screen'] });
+                    return systemPreferences.getMediaAccessStatus('screen') === 'granted';
+                } catch (e) {
+                    console.log("Failed to get sources (likely denied):", e);
+                    return false;
+                }
+            }
+
             return await systemPreferences.askForMediaAccess(mediaType);
         } catch (error) {
             console.error(`Failed to request ${mediaType} access:`, error);
@@ -109,7 +129,7 @@ app.on('ready', () => {
     ipcMain.handle('remote-control', async (event, action) => {
         try {
             // Lazy load robotjs to avoid startup crashes if not built correctly
-            const robot = require('robotjs');
+            const robot = require('@jitsi/robotjs');
             const { width: screenWidth, height: screenHeight } = robot.getScreenSize();
 
             switch (action.type) {

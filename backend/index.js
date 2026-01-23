@@ -20,7 +20,10 @@ const io = new Server(server, {
 io.on('connection', (socket) => {
     const userId = socket.handshake.query.userId || socket.id;
     socket.userId = userId;
-    console.log(`User connected: ${userId}`);
+
+    // Auto-join the user's own room so they are reachable
+    socket.join(userId);
+    console.log(`User connected: ${userId} and joined personal room`);
 
     handleSocketEvents(io, socket);
     handleWebRTCEvents(io, socket);

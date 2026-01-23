@@ -4,6 +4,7 @@
       "private": true,
       "main": "electron/main.js",
       "dependencies": {
+            "@jitsi/robotjs": "^0.6.21",
             "@radix-ui/react-accordion": "^1.2.3",
             "@radix-ui/react-alert-dialog": "^1.1.6",
             "@radix-ui/react-aspect-ratio": "^1.1.2",
@@ -43,7 +44,6 @@
             "react-hook-form": "^7.55.0",
             "react-resizable-panels": "^2.1.7",
             "recharts": "^2.15.2",
-            "robotjs": "^0.6.0",
             "socket.io-client": "^4.8.3",
             "sonner": "^2.0.3",
             "tailwind-merge": "*",
@@ -51,6 +51,7 @@
             "zustand": "^5.0.10"
       },
       "devDependencies": {
+            "@electron/rebuild": "^4.0.1",
             "@types/node": "^20.10.0",
             "@types/react": "^19.2.9",
             "@types/react-dom": "^19.2.3",
@@ -65,6 +66,7 @@
       "scripts": {
             "dev": "vite",
             "build": "vite build",
+            "rebuild": "electron-rebuild",
             "electron": "wait-on tcp:3005 && electron .",
             "electron:dev": "concurrently -k \"cross-env BROWSER=none npm run dev\" \"npm run electron\"",
             "electron:build": "vite build && electron-builder"
