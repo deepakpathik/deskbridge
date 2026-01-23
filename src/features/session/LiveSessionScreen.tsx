@@ -70,7 +70,9 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
       // Add tracks to the peer connection
       const pc = webrtcService.getPeerConnection();
       if (pc) {
+        console.log("Adding tracks to peer connection:", stream.getTracks().map(t => t.kind));
         stream.getTracks().forEach(track => {
+          // Use addTransceiver for better control/compatibility if needed, but addTrack is standard
           pc.addTrack(track, stream);
         });
 
@@ -149,7 +151,11 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
             onMouseUp={handleMouseUp}
             onContextMenu={(e) => e.preventDefault()}
           >
-            <VideoPreview stream={activeStream} className="w-full h-full object-contain pointer-events-none" />
+            <VideoPreview
+              stream={activeStream}
+              className="w-full h-full object-contain pointer-events-none"
+              muted={activeStream === localStream}
+            />
           </div>
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950 flex items-center justify-center">

@@ -45,6 +45,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
         socket.off('room-joined');
         socket.off('room-not-found');
         socket.off('user-connected');
+        socket.off('user-disconnected');
         socket.off('call-accepted');
         socket.off('error');
 
@@ -94,6 +95,14 @@ export const useAppStore = create<AppStore>((set, get) => ({
         socket.on('call-accepted', () => {
             console.log('Call accepted by host');
             set({ status: 'IN_SESSION', error: null, notification: "Session Started" });
+        });
+
+        socket.on('user-disconnected', (userId) => {
+            console.log('Peer disconnected:', userId);
+            const { remoteDeviceId } = get();
+            if (remoteDeviceId === userId) {
+                set({ status: 'IDLE', remoteDeviceId: null, isCaller: false, notification: "Peer Disconnected", error: null });
+            }
         });
     },
 

@@ -201,6 +201,12 @@ export class WebRTCService {
         if (!this.peerConnection) {
             throw new Error('PeerConnection not initialized');
         }
+
+        if (this.peerConnection.signalingState === 'stable') {
+            console.warn('Received Answer but signaling state is already stable. Ignoring.');
+            return;
+        }
+
         await this.peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
     }
 

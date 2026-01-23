@@ -12,6 +12,7 @@ export function VideoPreview({ stream, className = '', muted = true }: VideoPrev
     useEffect(() => {
         if (videoRef.current && stream) {
             videoRef.current.srcObject = stream;
+            videoRef.current.play().catch(e => console.error("Error playing video:", e));
         }
     }, [stream]);
 

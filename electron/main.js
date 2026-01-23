@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, systemPreferences } = require('electron');
+const { app, BrowserWindow, ipcMain, systemPreferences, session } = require('electron');
 const path = require('path');
 
 let mainWindow;
@@ -10,9 +10,9 @@ const createWindow = () => {
         titleBarStyle: 'hiddenInset',
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
-            nodeIntegration: false,
-            contextIsolation: true,
-            sandbox: true,
+            // nodeIntegration: false, // Default
+            // contextIsolation: true, // Default
+            sandbox: true, // Sandbox requires explicit permission handling
         },
         backgroundColor: '#000000',
         show: false,
@@ -26,8 +26,24 @@ const createWindow = () => {
         mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
     }
 
+    // Handle screen sharing permission for sandbox
+    mainWindow.webContents.session.setDisplayMediaRequestHandler((request, callback) => {
+        console.log('Display Media Request:', JSON.stringify(request));
 
+        // This grants permission to capture the screen. 
+        // In Electron > 20ish, calling callback like this SHOULD trigger the native OS picker on macOS.
+        // If it returns 'AbortError', the OS might have denied it or the picker was cancelled.
 
+        // Try passing just video: true if request.video is complex
+        // Or inspect if we need to list sources using desktopCapturer (for custom pickers)
+
+        try {
+            callback({ video: request.video, audio: request.audio });
+            console.log('Display Media Permission Granted (Invoked Callback)');
+        } catch (err) {
+            console.error('Error invoking display media callback:', err);
+        }
+    });
 
     mainWindow.once('ready-to-show', () => {
         mainWindow.show();

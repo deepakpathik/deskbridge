@@ -137,6 +137,10 @@ export function HomeScreen({ onOpenSettings }: HomeScreenProps) {
               <div className="font-mono text-2xl font-bold text-white tracking-widest break-all">
                 {displayDeviceId}
               </div>
+              <div className="mt-2 text-xs text-emerald-400 flex items-center gap-1">
+                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+                Ready for incoming connections
+              </div>
             </div>
 
             <button

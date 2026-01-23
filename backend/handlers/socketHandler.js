@@ -19,8 +19,13 @@ const handleSocketEvents = (io, socket) => {
         }
     });
 
-    socket.on('disconnect', () => {
-        console.log(`User disconnected: ${socket.userId || socket.id}`);
+    socket.on('disconnecting', () => {
+        const rooms = [...socket.rooms];
+        rooms.forEach((roomId) => {
+            // Notify others in the room (excluding the sender, which is default for 'to')
+            socket.to(roomId).emit('user-disconnected', socket.userId || socket.id);
+        });
+        console.log(`User disconnecting: ${socket.userId || socket.id}`);
     });
 };
 
