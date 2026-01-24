@@ -126,7 +126,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
             console.log('Peer disconnected:', userId);
             const { remoteDeviceId } = get();
             if (remoteDeviceId === userId) {
-                set({ status: 'IDLE', remoteDeviceId: null, isCaller: false, notification: "Peer Disconnected", error: null });
+                set({ status: 'CONNECTED', remoteDeviceId: null, isCaller: false, notification: "Online - Ready for connections", error: null });
             }
         });
     },
@@ -163,7 +163,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
         if (remoteDeviceId) {
             socketService.leaveRoom(remoteDeviceId);
         }
-        set({ status: 'IDLE', remoteDeviceId: null, isCaller: false, error: null, notification: null });
+        set({ status: 'CONNECTED', remoteDeviceId: null, isCaller: false, error: null, notification: "Online - Ready for connections" });
     },
 
     disconnect: () => {
