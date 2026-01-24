@@ -64,8 +64,15 @@ export const useAppStore = create<AppStore>((set, get) => ({
         socket.on('room-joined', (roomId) => {
             console.log('Successfully joined room:', roomId);
             const { myDeviceId } = get();
-            if (roomId !== myDeviceId) {
-                set({ status: 'CONNECTED', error: null, notification: "Waiting for approval..." });
+            if (roomId === myDeviceId) {
+                // I joined my own room, I am now online and ready for connections
+                set({ status: 'CONNECTED', error: null, notification: "Online - Ready for connections" });
+            } else {
+                // I joined someone else's room, wait for their approval? 
+                // Actually if I join their room, I am the caller.
+                // The 'user-connected' event on THEIR side triggers the request.
+                // On MY side, I just wait.
+                set({ status: 'WAITING_FOR_APPROVAL', error: null, notification: "Waiting for approval..." });
             }
         });
 
