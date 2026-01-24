@@ -4,6 +4,11 @@ import { getOrCreateDeviceId } from '../utils/deviceId';
 
 export type AppStatus = 'IDLE' | 'CONNECTING' | 'WAITING_FOR_APPROVAL' | 'CONNECTED' | 'INCOMING_REQUEST' | 'IN_SESSION' | 'ERROR' | 'DISCONNECTED';
 
+export interface RecentSession {
+    deviceId: string;
+    timestamp: number;
+}
+
 interface AppStore {
     status: AppStatus;
     myDeviceId: string | null;
@@ -12,6 +17,7 @@ interface AppStore {
     isCaller: boolean;
     error: string | null;
     notification: string | null;
+    recentSessions: RecentSession[];
 
     // Actions
     initializeSocket: () => void;
@@ -24,6 +30,7 @@ interface AppStore {
     denyConnection: () => void;
     clearError: () => void;
     clearNotification: () => void;
+    removeSession: (deviceId: string) => void;
 }
 
 export const useAppStore = create<AppStore>((set, get) => ({
@@ -34,6 +41,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
     isCaller: false,
     error: null,
     notification: null,
+    recentSessions: JSON.parse(localStorage.getItem('recent_sessions') || '[]'),
 
     initializeSocket: () => {
         const { myDeviceId } = get();
@@ -101,6 +109,16 @@ export const useAppStore = create<AppStore>((set, get) => ({
 
         socket.on('call-accepted', () => {
             console.log('Call accepted by host');
+            const { remoteDeviceId, recentSessions } = get();
+
+            // Add to recent sessions
+            if (remoteDeviceId) {
+                const newSession: RecentSession = { deviceId: remoteDeviceId, timestamp: Date.now() };
+                const updatedSessions = [newSession, ...recentSessions.filter(s => s.deviceId !== remoteDeviceId)].slice(0, 5); // Keep last 5
+                set({ recentSessions: updatedSessions });
+                localStorage.setItem('recent_sessions', JSON.stringify(updatedSessions));
+            }
+
             set({ status: 'IN_SESSION', error: null, notification: "Session Started" });
         });
 
@@ -161,10 +179,19 @@ export const useAppStore = create<AppStore>((set, get) => ({
     },
 
     approveConnection: () => {
-        const { myDeviceId } = get();
+        const { myDeviceId, remoteDeviceId, recentSessions } = get();
         if (myDeviceId) {
             socketService.sendCallAccepted(myDeviceId);
         }
+
+        // Add to recent sessions (Host side)
+        if (remoteDeviceId) {
+            const newSession: RecentSession = { deviceId: remoteDeviceId, timestamp: Date.now() };
+            const updatedSessions = [newSession, ...recentSessions.filter(s => s.deviceId !== remoteDeviceId)].slice(0, 5);
+            set({ recentSessions: updatedSessions });
+            localStorage.setItem('recent_sessions', JSON.stringify(updatedSessions));
+        }
+
         set({ status: 'IN_SESSION', error: null, notification: "Session Started" });
     },
 
@@ -173,6 +200,13 @@ export const useAppStore = create<AppStore>((set, get) => ({
     },
 
     clearError: () => set({ error: null }),
-    clearNotification: () => set({ notification: null })
+    clearNotification: () => set({ notification: null }),
+
+    removeSession: (deviceId) => {
+        const { recentSessions } = get();
+        const updatedSessions = recentSessions.filter(s => s.deviceId !== deviceId);
+        set({ recentSessions: updatedSessions });
+        localStorage.setItem('recent_sessions', JSON.stringify(updatedSessions));
+    }
 }));
 

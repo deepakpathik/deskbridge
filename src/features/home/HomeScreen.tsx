@@ -27,7 +27,9 @@ export function HomeScreen({ onOpenSettings }: HomeScreenProps) {
     remoteDeviceId,
     isSocketConnected,
     notification,
-    error
+    error,
+    recentSessions,
+    removeSession
   } = useAppStore();
 
   const [copied, setCopied] = useState(false);
@@ -244,6 +246,7 @@ export function HomeScreen({ onOpenSettings }: HomeScreenProps) {
 
             </div>
 
+
             {/* Section: Recent Connections */}
             <div>
               <div className="mb-6 mt-12">
@@ -257,14 +260,49 @@ export function HomeScreen({ onOpenSettings }: HomeScreenProps) {
 
               {/* List Style matching Settings Notifications list */}
               <div className="space-y-3">
-                {/* Empty State designed as a list item */}
-                <div className="backdrop-blur-3xl bg-black/20 rounded-xl p-8 border-2 border-white/30 shadow-lg flex flex-col items-center justify-center text-center opacity-70">
-                  <div className="p-4 rounded-full bg-white/5 mb-3">
-                    <History className="w-6 h-6 text-gray-400" />
+                {recentSessions.length === 0 ? (
+                  /* Empty State */
+                  <div className="backdrop-blur-3xl bg-black/20 rounded-xl p-8 border-2 border-white/30 shadow-lg flex flex-col items-center justify-center text-center opacity-70">
+                    <div className="p-4 rounded-full bg-white/5 mb-3">
+                      <History className="w-6 h-6 text-gray-400" />
+                    </div>
+                    <p className="text-sm font-medium text-gray-300">No recent connections</p>
+                    <p className="text-xs text-gray-500 mt-1">Your connection history will appear here</p>
                   </div>
-                  <p className="text-sm font-medium text-gray-300">No recent connections</p>
-                  <p className="text-xs text-gray-500 mt-1">Your connection history will appear here</p>
-                </div>
+                ) : (
+                  recentSessions.map((session) => (
+                    <div key={session.deviceId} className="w-full flex items-center justify-between gap-4 px-5 py-4 rounded-xl border-2 border-white/10 bg-black/20 hover:bg-white/5 transition-all duration-200 group">
+                      <div className="flex items-center gap-4 flex-1 cursor-pointer" onClick={() => { setDeviceIdInput(session.deviceId); handleConnect(); }}>
+                        <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/20 group-hover:border-blue-500/50 transition-colors">
+                          <History className="w-5 h-5 text-blue-400" />
+                        </div>
+                        <div>
+                          <div className="text-sm font-mono font-bold text-white tracking-wider">{session.deviceId}</div>
+                          <div className="text-[10px] text-gray-500">
+                            Last connected: {new Date(session.timestamp).toLocaleDateString()} {new Date(session.timestamp).toLocaleTimeString()}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => { setDeviceIdInput(session.deviceId); connectToDevice(session.deviceId); }}
+                          className="p-2 rounded-lg bg-white/5 hover:bg-blue-500/20 text-gray-400 hover:text-blue-400 transition-all border border-transparent hover:border-blue-500/30"
+                          title="Connect"
+                        >
+                          <ArrowRight className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); removeSession(session.deviceId); }}
+                          className="p-2 rounded-lg bg-white/5 hover:bg-red-500/20 text-gray-400 hover:text-red-400 transition-all border border-transparent hover:border-red-500/30"
+                          title="Remove from history"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
 
