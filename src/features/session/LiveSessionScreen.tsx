@@ -5,8 +5,6 @@ import { webrtcService } from '../../services/webrtcService';
 import { socketService } from '../../services/socketService';
 import {
   Monitor,
-  Maximize,
-  Minimize,
   Volume2,
   VolumeX,
   MousePointer,
@@ -26,14 +24,15 @@ import { useWebRTC } from '../../hooks/useWebRTC';
 export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
   useWebRTC(); // Initialize WebRTC signaling and handshake handling
 
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [showToolbar, setShowToolbar] = useState(true);
+  // const [isFullscreen, setIsFullscreen] = useState(false);
+  const showToolbar = true;
+
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [mouseControl, setMouseControl] = useState(true);
   const [keyboardControl, setKeyboardControl] = useState(true);
-  const [latency, setLatency] = useState(24);
-  const [fps, setFps] = useState(60);
-  const [bandwidth, setBandwidth] = useState(4.2);
+  const [latency] = useState(24);
+  const [fps] = useState(60);
+  const [bandwidth] = useState(4.2);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -53,11 +52,20 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
       setRemoteStream(stream);
     });
 
+    // Auto-Fullscreen on mount
+    const api = (window as any).electronAPI;
+    if (api?.setFullscreen) {
+      api.setFullscreen(true);
+    }
+
     // Clean up
     return () => {
       webrtcService.cleanup();
       setLocalStream(null);
       setRemoteStream(null);
+      if (api?.setFullscreen) {
+        api.setFullscreen(false);
+      }
     };
   }, []);
 
@@ -201,7 +209,7 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
             <VideoPreview
               stream={activeStream}
               className="w-full h-full object-contain pointer-events-none"
-              muted={activeStream === localStream}
+              muted={activeStream === localStream || !audioEnabled}
             />
           </div>
         ) : (
@@ -296,6 +304,12 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
             </div>
           </div>
         </div>
+
+        {error && (
+          <div className="absolute top-24 left-1/2 -translate-x-1/2 px-4 py-2 bg-red-500/80 backdrop-blur-md rounded-lg border border-red-400/50 text-white text-sm font-medium shadow-lg animate-in fade-in slide-in-from-top-4">
+            {error}
+          </div>
+        )}
       </div>
 
       <div
@@ -305,74 +319,66 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
         <div className="relative">
           <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-pink-500/20 blur-xl rounded-3xl"></div>
 
-          <div className="relative px-8 py-5 backdrop-blur-2xl bg-black/60 rounded-3xl border-2 border-white/50 shadow-2xl">
-            <div className="flex items-center gap-3">
+          <div className="relative px-6 py-4 backdrop-blur-2xl bg-black/60 rounded-3xl border-2 border-white/50 shadow-2xl">
+            <div className="flex items-center gap-2">
               <button
                 onClick={() => setMouseControl(!mouseControl)}
-                className={`p-4 rounded-xl transition-all duration-200 ${mouseControl
+                className={`p-3 rounded-xl transition-all duration-200 ${mouseControl
                   ? 'bg-gradient-to-br from-blue-600 to-cyan-600 text-white shadow-lg shadow-blue-500/30 scale-105'
                   : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white backdrop-blur-xl border border-white/10'
                   }`}
                 title="Mouse Control"
               >
-                <MousePointer className="w-5 h-5" />
+                <MousePointer className="w-4 h-4" />
               </button>
 
               <button
                 onClick={() => setKeyboardControl(!keyboardControl)}
-                className={`p-4 rounded-xl transition-all duration-200 ${keyboardControl
+                className={`p-3 rounded-xl transition-all duration-200 ${keyboardControl
                   ? 'bg-gradient-to-br from-blue-600 to-cyan-600 text-white shadow-lg shadow-blue-500/30 scale-105'
                   : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white backdrop-blur-xl border border-white/10'
                   }`}
                 title="Keyboard Control"
               >
-                <Keyboard className="w-5 h-5" />
+                <Keyboard className="w-4 h-4" />
               </button>
 
-              <div className="w-1 h-10 bg-gradient-to-b from-transparent via-white/40 to-transparent mx-2 rounded-full"></div>
+              <div className="w-1 h-8 bg-gradient-to-b from-transparent via-white/40 to-transparent mx-1 rounded-full"></div>
 
               <button
                 onClick={() => setAudioEnabled(!audioEnabled)}
-                className={`p-4 rounded-xl backdrop-blur-xl border border-white/10 transition-all duration-200 ${audioEnabled
+                className={`p-3 rounded-xl backdrop-blur-xl border border-white/10 transition-all duration-200 ${audioEnabled
                   ? 'bg-white/5 hover:bg-white/10 text-white'
                   : 'bg-red-500/20 text-red-400 hover:bg-red-500/30 border-2 border-red-500/40'
                   }`}
                 title="Audio"
               >
-                {audioEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
-              </button>
-
-              <button
-                onClick={() => setIsFullscreen(!isFullscreen)}
-                className="p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-all backdrop-blur-xl border-2 border-white/30 hover:border-white/50 hover:scale-105 duration-200"
-                title="Fullscreen"
-              >
-                {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+                {audioEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
               </button>
 
               {/* Only show "Share Screen" button in toolbar if I am Host */}
               {!isCaller && (
                 <button
                   onClick={handleStartShare}
-                  className={`p-4 rounded-xl backdrop-blur-xl border-2 border-white/30 transition-all duration-200 ${localStream
+                  className={`p-3 rounded-xl backdrop-blur-xl border-2 border-white/30 transition-all duration-200 ${localStream
                     ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30 border-green-500/30'
                     : 'bg-white/5 hover:bg-white/10 text-white'
                     }`}
                   title={localStream ? "Sharing Screen" : "Start Sharing"}
                 >
-                  <Cast className="w-5 h-5" />
+                  <Cast className="w-4 h-4" />
                 </button>
               )}
 
-              <div className="w-1 h-10 bg-gradient-to-b from-transparent via-white/40 to-transparent mx-2 rounded-full"></div>
+              <div className="w-1 h-8 bg-gradient-to-b from-transparent via-white/40 to-transparent mx-1 rounded-full"></div>
 
               <button
                 onClick={onDisconnect}
-                className="px-6 py-4 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 transition-all flex items-center gap-2 font-semibold shadow-lg shadow-red-500/30 hover:shadow-red-500/50 hover:scale-105 duration-200"
+                className="px-5 py-3 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 transition-all flex items-center gap-2 font-semibold shadow-lg shadow-red-500/30 hover:shadow-red-500/50 hover:scale-105 duration-200"
                 title="Disconnect"
               >
-                <PhoneOff className="w-5 h-5" />
-                <span>End Session</span>
+                <PhoneOff className="w-4 h-4" />
+                <span className="text-sm">End</span>
               </button>
             </div>
           </div>

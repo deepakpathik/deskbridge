@@ -171,6 +171,12 @@ app.on('ready', () => {
         }
     });
 
+    ipcMain.handle('set-fullscreen', (event, flag) => {
+        if (mainWindow) {
+            mainWindow.setFullScreen(flag);
+        }
+    });
+
     createWindow();
 });
 

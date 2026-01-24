@@ -6,4 +6,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
     requestMediaAccess: (mediaType) => ipcRenderer.invoke('request-media-access', mediaType),
     openSecurityPreferences: (pane) => ipcRenderer.invoke('open-security-preferences', pane),
     performControlAction: (action) => ipcRenderer.invoke('remote-control', action),
+    setFullscreen: (flag) => ipcRenderer.invoke('set-fullscreen', flag),
 });
