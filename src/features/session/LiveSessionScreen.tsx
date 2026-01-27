@@ -74,9 +74,10 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
       socketService.offPermissionUpdate();
       setLocalStream(null);
       setRemoteStream(null);
-      if (api?.setFullscreen) {
-        api.setFullscreen(false);
-      }
+      // Keep fullscreen even after disconnect
+      // if (api?.setFullscreen) {
+      //   api.setFullscreen(false);
+      // }
     };
   }, [isControlEnabled]);
 
@@ -263,7 +264,7 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
       <div className="w-full h-full relative overflow-hidden">
         {activeStream ? (
           <div
-            className="w-full h-full flex items-center justify-center bg-black cursor-none"
+            className={`w-full h-full flex items-center justify-center bg-black`}
             onMouseMove={handleMouseMove}
             onMouseDown={handleMouseDown}
             onMouseUp={handleMouseUp}
