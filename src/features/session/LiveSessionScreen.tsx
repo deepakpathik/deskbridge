@@ -97,7 +97,7 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
 
         // Trigger Renegotiation manually by creating and sending a new offer
         console.log("Creating new offer for screen share...");
-        const offer = await webrtcService.createOffer();
+        const offer = await webrtcService.createOffer({ iceRestart: true });
         if (remoteDeviceId) {
           socketService.sendOffer(remoteDeviceId, offer);
         }

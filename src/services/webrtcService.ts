@@ -68,10 +68,7 @@ export class WebRTCService {
             iceServers: [
                 { urls: 'stun:stun.l.google.com:19302' },
                 { urls: 'stun:stun1.l.google.com:19302' },
-                { urls: 'stun:stun2.l.google.com:19302' },
-                { urls: 'stun:stun3.l.google.com:19302' },
-                { urls: 'stun:stun4.l.google.com:19302' },
-                { urls: 'stun:stun.services.mozilla.com' }
+                { urls: 'stun:stun2.l.google.com:19302' }
             ]
         };
 
@@ -152,7 +149,7 @@ export class WebRTCService {
     }
 
 
-    public async createOffer(): Promise<RTCSessionDescriptionInit> {
+    public async createOffer(options?: RTCOfferOptions): Promise<RTCSessionDescriptionInit> {
         if (!this.peerConnection || this.peerConnection.connectionState === 'closed' || this.peerConnection.signalingState === 'closed') {
             this.createPeerConnection();
         }
@@ -182,7 +179,7 @@ export class WebRTCService {
             throw new Error('PeerConnection not initialized');
         }
 
-        const offer = await this.peerConnection.createOffer();
+        const offer = await this.peerConnection.createOffer(options);
         await this.peerConnection.setLocalDescription(offer);
         return offer;
     }
