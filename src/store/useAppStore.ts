@@ -124,8 +124,11 @@ export const useAppStore = create<AppStore>((set, get) => ({
 
         socket.on('user-disconnected', (userId) => {
             console.log('Peer disconnected:', userId);
-            const { remoteDeviceId } = get();
-            if (remoteDeviceId === userId) {
+            const { remoteDeviceId, isCaller } = get();
+            if (remoteDeviceId && remoteDeviceId === userId) {
+                if (isCaller) {
+                    socketService.leaveRoom(remoteDeviceId);
+                }
                 set({ status: 'CONNECTED', remoteDeviceId: null, isCaller: false, notification: "Online - Ready for connections", error: null });
             }
         });

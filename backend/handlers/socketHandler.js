@@ -19,6 +19,11 @@ const handleSocketEvents = (io, socket) => {
         }
     });
 
+    socket.on('leave-room', (roomId) => {
+        socket.leave(roomId);
+        console.log(`User ${socket.userId || socket.id} left room ${roomId}`);
+    });
+
     socket.on('disconnecting', () => {
         const rooms = [...socket.rooms];
         rooms.forEach((roomId) => {
