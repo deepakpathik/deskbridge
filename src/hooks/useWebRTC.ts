@@ -16,24 +16,28 @@ export function useWebRTC() {
         if (hasInitiated.current) return;
         hasInitiated.current = true;
 
+        const handleOffer = async (offer: RTCSessionDescriptionInit) => {
+            console.log("Received Offer");
+            const answer = await webrtcService.handleOffer(offer);
+            if (remoteDeviceId) {
+                socketService.sendAnswer(remoteDeviceId, answer);
+            }
+        };
+
+        const handleAnswer = async (answer: RTCSessionDescriptionInit) => {
+            console.log("Received Answer");
+            await webrtcService.handleAnswer(answer);
+        };
+
+        const handleIceCandidate = async (candidate: RTCIceCandidate) => {
+            console.log("Received ICE Candidate");
+            await webrtcService.handleCandidate(candidate);
+        };
+
         const setupSignaling = () => {
-            socketService.onOffer(async (offer) => {
-                console.log("Received Offer");
-                const answer = await webrtcService.handleOffer(offer);
-                if (remoteDeviceId) {
-                    socketService.sendAnswer(remoteDeviceId, answer);
-                }
-            });
-
-            socketService.onAnswer(async (answer) => {
-                console.log("Received Answer");
-                await webrtcService.handleAnswer(answer);
-            });
-
-            socketService.onIceCandidate(async (candidate) => {
-                console.log("Received ICE Candidate");
-                await webrtcService.handleCandidate(candidate);
-            });
+            socketService.onOffer(handleOffer);
+            socketService.onAnswer(handleAnswer);
+            socketService.onIceCandidate(handleIceCandidate);
 
             webrtcService.onIceCandidate((candidate) => {
                 if (remoteDeviceId) {
@@ -41,9 +45,15 @@ export function useWebRTC() {
                     if (roomId) socketService.sendIceCandidate(roomId, candidate);
                 }
             });
+
+            return () => {
+                socketService.offOffer(handleOffer);
+                socketService.offAnswer(handleAnswer);
+                socketService.offIceCandidate(handleIceCandidate);
+            };
         };
 
-        setupSignaling();
+        const cleanupSignaling = setupSignaling();
 
         const initiateHandshake = async () => {
             if (isCaller && remoteDeviceId) {
@@ -55,5 +65,9 @@ export function useWebRTC() {
 
         initiateHandshake();
 
+        return () => {
+            cleanupSignaling();
+            hasInitiated.current = false;
+        };
     }, [status, isCaller, remoteDeviceId]);
 }

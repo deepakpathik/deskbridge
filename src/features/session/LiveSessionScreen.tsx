@@ -256,13 +256,7 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
           </div>
         )}
 
-        <div className="absolute top-6 left-6 flex items-center gap-3 px-5 py-3 backdrop-blur-2xl bg-red-500/20 rounded-2xl border-2 border-red-500/50 shadow-2xl shadow-red-500/20">
-          <div className="relative flex items-center justify-center">
-            <div className={`w-3 h-3 rounded-full shadow-lg ${activeStream ? 'bg-red-500 animate-pulse shadow-red-500/50' : 'bg-gray-500'}`}></div>
-            {activeStream && <div className="absolute w-3 h-3 bg-red-500 rounded-full animate-ping"></div>}
-          </div>
-          <span className="text-sm font-bold tracking-wide">{activeStream ? 'LIVE STREAM' : (isCaller ? 'WAITING' : 'READY TO SHARE')}</span>
-        </div>
+
 
         {/* Existing Stats Panel ... */}
         <div className="absolute top-6 right-6 backdrop-blur-2xl bg-black/40 rounded-2xl border-2 border-white/30 shadow-2xl overflow-hidden">

@@ -73,6 +73,12 @@ class SocketService {
         }
     }
 
+    public offOffer(callback?: (offer: RTCSessionDescriptionInit) => void) {
+        if (this.socket) {
+            this.socket.off('offer', callback);
+        }
+    }
+
     public sendAnswer(roomId: string, answer: RTCSessionDescriptionInit) {
         if (this.socket) {
             this.socket.emit('answer', { roomId, answer });
@@ -85,6 +91,12 @@ class SocketService {
         }
     }
 
+    public offAnswer(callback?: (answer: RTCSessionDescriptionInit) => void) {
+        if (this.socket) {
+            this.socket.off('answer', callback);
+        }
+    }
+
     public sendIceCandidate(roomId: string, candidate: RTCIceCandidate) {
         if (this.socket) {
             this.socket.emit('ice-candidate', { roomId, candidate });
@@ -94,6 +106,12 @@ class SocketService {
     public onIceCandidate(callback: (candidate: RTCIceCandidate) => void) {
         if (this.socket) {
             this.socket.on('ice-candidate', callback);
+        }
+    }
+
+    public offIceCandidate(callback?: (candidate: RTCIceCandidate) => void) {
+        if (this.socket) {
+            this.socket.off('ice-candidate', callback);
         }
     }
 
