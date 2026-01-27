@@ -154,24 +154,56 @@ app.on('ready', () => {
                     }
                     break;
                 case 'mousedown':
+                    if (action.x >= 0 && action.x <= 1 && action.y >= 0 && action.y <= 1) {
+                        robot.moveMouse(action.x * screenWidth, action.y * screenHeight);
+                    }
                     robot.mouseToggle('down', action.button || 'left');
                     break;
                 case 'mouseup':
+                    if (action.x >= 0 && action.x <= 1 && action.y >= 0 && action.y <= 1) {
+                        robot.moveMouse(action.x * screenWidth, action.y * screenHeight);
+                    }
                     robot.mouseToggle('up', action.button || 'left');
                     break;
                 case 'click':
+                    if (action.x >= 0 && action.x <= 1 && action.y >= 0 && action.y <= 1) {
+                        robot.moveMouse(action.x * screenWidth, action.y * screenHeight);
+                    }
                     robot.mouseClick(action.button || 'left', action.double || false);
                     break;
                 case 'scroll':
-                    robot.scrollMouse(action.dx || 0, action.dy || 0);
+                    // Scale down DOM delta (pixels) to RobotJS (lines/ticks)
+                    // Standard wheel is ~100px. robotjs sees ~1 line. 
+                    // Factor of 20-50 provides smoother control.
+                    const SCALE = 20;
+                    const MAX_SCROLL = 50; // Cap to prevent infinite scroll runaway
+
+                    let dx = (action.dx || 0) / SCALE;
+                    let dy = (action.dy || 0) / SCALE;
+
+                    // Clamp values
+                    dx = Math.max(Math.min(dx, MAX_SCROLL), -MAX_SCROLL);
+                    dy = Math.max(Math.min(dy, MAX_SCROLL), -MAX_SCROLL);
+
+                    // Only scroll if there's significant movement (deadzone)
+                    if (Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1) {
+                        robot.scrollMouse(dx, dy);
+                    }
                     break;
                 case 'keydown':
-                    // Basic key mapping required. action.key should be robotjs compatible.
-                    // For now, support simple characters and some special keys.
                     try {
-                        robot.keyTap(action.key.toLowerCase(), action.modifiers);
+                        // Support modifiers if explicitly sent, but usually we send raw key events
+                        // robot.keyToggle(key, state, [modifiers])
+                        robot.keyToggle(action.key, 'down', action.modifiers || []);
                     } catch (e) {
-                        console.log("Unsupported key:", action.key);
+                        console.log("Unsupported key down:", action.key);
+                    }
+                    break;
+                case 'keyup':
+                    try {
+                        robot.keyToggle(action.key, 'up', action.modifiers || []);
+                    } catch (e) {
+                        console.log("Unsupported key up:", action.key);
                     }
                     break;
             }

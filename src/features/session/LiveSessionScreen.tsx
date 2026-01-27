@@ -12,8 +12,11 @@ import {
   PhoneOff,
   Activity,
   Wifi,
-  Cast
+  Cast,
+  Lock,
+  Unlock
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface LiveSessionScreenProps {
   onDisconnect: () => void;
@@ -24,11 +27,12 @@ import { useWebRTC } from '../../hooks/useWebRTC';
 export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
   useWebRTC(); // Initialize WebRTC signaling and handshake handling
 
-  // const [isFullscreen, setIsFullscreen] = useState(false);
   const showToolbar = true;
 
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [mouseControl, setMouseControl] = useState(true);
+  const [isControlEnabled, setIsControlEnabled] = useState(true);
+  const [canControl, setCanControl] = useState(true);
   const [keyboardControl, setKeyboardControl] = useState(true);
   const [latency] = useState(24);
   const [fps] = useState(60);
@@ -40,34 +44,41 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
   const { remoteDeviceId, isCaller } = useAppStore();
 
   useEffect(() => {
-    // Host Logic: Handle incoming control data
-    webrtcService.onControlData((action) => {
-      if (window.electronAPI?.performControlAction) {
+    socketService.onControlAction((action) => {
+      if (isControlEnabled && window.electronAPI?.performControlAction) {
         window.electronAPI.performControlAction(action);
       }
     });
 
-    // Guest Logic: Handle incoming remote stream
+    socketService.onPermissionUpdate((allowed) => {
+      setCanControl(allowed);
+      if (!allowed) {
+        toast.error('Remote control disabled by the host');
+      } else {
+        toast.success('Remote control enabled');
+      }
+    });
+
     webrtcService.onTrack((stream) => {
       setRemoteStream(stream);
     });
 
-    // Auto-Fullscreen on mount
     const api = (window as any).electronAPI;
     if (api?.setFullscreen) {
       api.setFullscreen(true);
     }
 
-    // Clean up
     return () => {
       webrtcService.cleanup();
+      socketService.offControlAction();
+      socketService.offPermissionUpdate();
       setLocalStream(null);
       setRemoteStream(null);
       if (api?.setFullscreen) {
         api.setFullscreen(false);
       }
     };
-  }, []);
+  }, [isControlEnabled]);
 
   const handleStartShare = async () => {
     setError(null);
@@ -107,32 +118,70 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
     return 'text-red-400';
   };
 
-  // Mouse throttling to prevent flooding (max 60fps)
   const lastMouseTime = useRef(0);
+  const lastScrollTime = useRef(0);
+
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!mouseControl || !remoteStream) return;
+    if (!mouseControl || !remoteStream || !canControl) return;
 
     const now = Date.now();
-    if (now - lastMouseTime.current < 16) return; // ~60fps cap
+    if (now - lastMouseTime.current < 16) return;
     lastMouseTime.current = now;
 
     const rect = e.currentTarget.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width;
     const y = (e.clientY - rect.top) / rect.height;
-    webrtcService.sendControlData({ type: 'mousemove', x, y });
+
+    if (remoteDeviceId) {
+      socketService.sendControlAction(remoteDeviceId, { type: 'mousemove', x, y });
+    }
   };
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!mouseControl || !remoteStream) return;
-    webrtcService.sendControlData({ type: 'mousedown', button: e.button === 0 ? 'left' : 'right' });
+    if (!mouseControl || !remoteStream || !remoteDeviceId || !canControl) return;
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+
+    socketService.sendControlAction(remoteDeviceId, {
+      type: 'mousedown',
+      button: e.button === 0 ? 'left' : 'right',
+      x,
+      y
+    });
   };
 
   const handleMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!mouseControl || !remoteStream) return;
-    webrtcService.sendControlData({ type: 'mouseup', button: e.button === 0 ? 'left' : 'right' });
+    if (!mouseControl || !remoteStream || !remoteDeviceId || !canControl) return;
+
+    // Capture position for robust clicking
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+
+    socketService.sendControlAction(remoteDeviceId, {
+      type: 'mouseup',
+      button: e.button === 0 ? 'left' : 'right',
+      x,
+      y
+    });
   };
 
-  // RobotJS Key Mapping
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (!mouseControl || !remoteStream || !remoteDeviceId || !canControl) return;
+
+    const now = Date.now();
+    if (now - lastScrollTime.current < 30) return;
+    lastScrollTime.current = now;
+
+    socketService.sendControlAction(remoteDeviceId, {
+      type: 'scroll',
+      dx: e.deltaX,
+      dy: e.deltaY
+    });
+  };
+
   const getRobotJSKey = (key: string): string | null => {
     const map: { [key: string]: string } = {
       'Backspace': 'backspace',
@@ -156,41 +205,55 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
     };
 
     if (map[key]) return map[key];
-
-    // For regular characters, robotjs usually takes lowercase
     if (key.length === 1) return key.toLowerCase();
-
     return null;
   };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!keyboardControl || !remoteStream) return;
+      if (!keyboardControl || !remoteStream || !canControl) return;
 
       const robotKey = getRobotJSKey(e.key);
       if (robotKey) {
-        // Collect modifiers
-        const modifiers = [];
-        if (e.ctrlKey) modifiers.push('control');
-        if (e.altKey) modifiers.push('alt');
-        if (e.shiftKey) modifiers.push('shift');
-        if (e.metaKey) modifiers.push('command');
+        // Prevent default for handled keys to stop browser actions (like scrolling or tabbing)
+        // But allow some like F12 or Refresh if strictly needed? For now, aggressively prevent.
+        e.preventDefault();
 
-        webrtcService.sendControlData({
-          type: 'keydown',
-          key: robotKey,
-          modifiers: modifiers
-        });
+        if (remoteDeviceId) {
+          socketService.sendControlAction(remoteDeviceId, {
+            type: 'keydown',
+            key: robotKey,
+            // No modifiers needed: we send them as individual key events
+          });
+        }
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (!keyboardControl || !remoteStream || !canControl) return;
+
+      const robotKey = getRobotJSKey(e.key);
+      if (robotKey) {
+        e.preventDefault();
+
+        if (remoteDeviceId) {
+          socketService.sendControlAction(remoteDeviceId, {
+            type: 'keyup',
+            key: robotKey,
+          });
+        }
       }
     };
 
     if (remoteStream) {
       window.addEventListener('keydown', handleKeyDown);
+      window.addEventListener('keyup', handleKeyUp);
     }
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [keyboardControl, remoteStream]);
+  }, [keyboardControl, remoteStream, remoteDeviceId]);
 
 
   const activeStream = isCaller ? remoteStream : localStream;
@@ -204,6 +267,7 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
             onMouseMove={handleMouseMove}
             onMouseDown={handleMouseDown}
             onMouseUp={handleMouseUp}
+            onWheel={handleWheel}
             onContextMenu={(e) => e.preventDefault()}
           >
             <VideoPreview
@@ -306,23 +370,29 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
           <div className="relative px-6 py-4 backdrop-blur-2xl bg-black/60 rounded-3xl border-2 border-white/50 shadow-2xl">
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setMouseControl(!mouseControl)}
-                className={`p-3 rounded-xl transition-all duration-200 ${mouseControl
-                  ? 'bg-gradient-to-br from-blue-600 to-cyan-600 text-white shadow-lg shadow-blue-500/30 scale-105'
-                  : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white backdrop-blur-xl border border-white/10'
+                onClick={() => canControl && setMouseControl(!mouseControl)}
+                disabled={!canControl}
+                className={`p-3 rounded-xl transition-all duration-200 ${!canControl
+                  ? 'bg-gray-800/50 text-gray-600 border border-gray-700/50 cursor-not-allowed'
+                  : mouseControl
+                    ? 'bg-gradient-to-br from-blue-600 to-cyan-600 text-white shadow-lg shadow-blue-500/30 scale-105'
+                    : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white backdrop-blur-xl border border-white/10'
                   }`}
-                title="Mouse Control"
+                title={canControl ? "Mouse Control" : "Control Disabled by Host"}
               >
                 <MousePointer className="w-4 h-4" />
               </button>
 
               <button
-                onClick={() => setKeyboardControl(!keyboardControl)}
-                className={`p-3 rounded-xl transition-all duration-200 ${keyboardControl
-                  ? 'bg-gradient-to-br from-blue-600 to-cyan-600 text-white shadow-lg shadow-blue-500/30 scale-105'
-                  : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white backdrop-blur-xl border border-white/10'
+                onClick={() => canControl && setKeyboardControl(!keyboardControl)}
+                disabled={!canControl}
+                className={`p-3 rounded-xl transition-all duration-200 ${!canControl
+                  ? 'bg-gray-800/50 text-gray-600 border border-gray-700/50 cursor-not-allowed'
+                  : keyboardControl
+                    ? 'bg-gradient-to-br from-blue-600 to-cyan-600 text-white shadow-lg shadow-blue-500/30 scale-105'
+                    : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white backdrop-blur-xl border border-white/10'
                   }`}
-                title="Keyboard Control"
+                title={canControl ? "Keyboard Control" : "Control Disabled by Host"}
               >
                 <Keyboard className="w-4 h-4" />
               </button>
@@ -339,6 +409,28 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
               >
                 {audioEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
               </button>
+
+              <div className="w-1 h-8 bg-gradient-to-b from-transparent via-white/40 to-transparent mx-1 rounded-full"></div>
+
+              {/* Host Control Toggle */}
+              {!isCaller && (
+                <button
+                  onClick={() => {
+                    const newState = !isControlEnabled;
+                    setIsControlEnabled(newState);
+                    if (remoteDeviceId) {
+                      socketService.sendPermissionUpdate(remoteDeviceId, newState);
+                    }
+                  }}
+                  className={`p-3 rounded-xl backdrop-blur-xl border border-white/10 transition-all duration-200 ${isControlEnabled
+                    ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border-emerald-500/30'
+                    : 'bg-red-500/20 text-red-400 hover:bg-red-500/30 border-2 border-red-500/40'
+                    }`}
+                  title={isControlEnabled ? "Remote Control Allowed" : "View Only Mode"}
+                >
+                  {isControlEnabled ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                </button>
+              )}
 
               {/* Only show "Share Screen" button in toolbar if I am Host */}
               {!isCaller && (

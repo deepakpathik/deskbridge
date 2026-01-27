@@ -126,6 +126,44 @@ class SocketService {
             this.socket.on('call-accepted', callback);
         }
     }
+
+    // Remote Control
+    public sendControlAction(roomId: string, action: any) {
+        if (this.socket) {
+            this.socket.emit('control-action', { roomId, action });
+        }
+    }
+
+    public onControlAction(callback: (action: any) => void) {
+        if (this.socket) {
+            this.socket.on('control-action', callback);
+        }
+    }
+
+    public offControlAction(callback?: (action: any) => void) {
+        if (this.socket) {
+            this.socket.off('control-action', callback);
+        }
+    }
+
+    // Permission Sync
+    public sendPermissionUpdate(roomId: string, allowed: boolean) {
+        if (this.socket) {
+            this.socket.emit('permission-update', { roomId, allowed });
+        }
+    }
+
+    public onPermissionUpdate(callback: (allowed: boolean) => void) {
+        if (this.socket) {
+            this.socket.on('permission-update', callback);
+        }
+    }
+
+    public offPermissionUpdate(callback?: (allowed: boolean) => void) {
+        if (this.socket) {
+            this.socket.off('permission-update', callback);
+        }
+    }
 }
 
 export const socketService = new SocketService();

@@ -3,35 +3,28 @@
 DeskBridge is a real-time remote desktop application that enables users to securely view and control another computer over the internet using live video streaming.
 Unlike screenshot-based screen sharing, DeskBridge uses WebRTC to stream the desktop as a continuous, low-latency video feed, similar to professional tools like AnyDesk and TeamViewer.
 
-# DeskBridge UI Design
+## 🚀 Key Features
 
-## 🚀 Project Idea
-This is a code bundle for DeskBridge UI Design. The original project is available at [Figma Design](https://www.figma.com/design/kEcPFbmLyAWP4P7jHx2sPy/DeskBridge-UI-Design).
-
-The core idea behind DeskBridge is to build a lightweight, low-latency remote desktop system that works across platforms and focuses on:
-- Live desktop streaming (not screenshots)
-- Real-time mouse and keyboard control
-- Secure, session-based connections
-- Simple and clean user experience
-
-This project is being developed as a learning-focused system-level application to explore real-time communication, networking, and desktop application development.
-
-## ✨ Key Features
 - 🔴 **Live Desktop Streaming** using WebRTC
 - 🖱️ **Remote Mouse & Keyboard Control**
+    - **Robust Mouse**: Normalized coordinates for resolution independence, positioned clicks, and scaled scrolling.
+    - **Keyboard Support**: Full key mapping with modifier support (Ctrl, Shift, etc.).
+    - **Access Control**: Host can instantly grant or revoke control permissions.
 - 🔐 **Session-Based Authentication**
-- ⚡ **Low-Latency Peer-to-Peer Communication**
+- ⚡ **Low-Latency Peer-to-Peer Communication** via Socket.IO
 - 🖥️ **Cross-Platform Desktop App** (Windows, macOS, Linux)
 - 🌗 **Light & Dark Mode UI**
 
-## 🧠 How It Works (High-Level)
-1. The host machine captures its desktop as a media stream.
-2. The stream is encoded and transmitted in real time using WebRTC.
-3. A signaling server is used to establish peer-to-peer connections.
-4. The controller machine receives and displays the live video feed.
-5. Mouse and keyboard events are sent back to the host via a real-time control channel.
+## 🧠 Architecture
 
-## 🧱 Tech Stack
+The system follows a **Controller (Guest) -> Server -> Host** scaling approach:
+
+1.  **Controller (Guest)**: Captures mouse movements relative to the video feed. Coordinates are **normalized** (0.0 to 1.0) to be independent of screen resolution.
+2.  **Transport**: Events are sent via **Socket.IO** (`control-action` event) instead of WebRTC DataChannels to ensure reliability for critical control inputs.
+3.  **Host**: Receives the normalized coordinates and uses **RobotJS** (via Electron IPC) to move the system cursor and simulate keystrokes, scaling the 0-1 control data to the Host's actual screen resolution.
+4.  **Security**: Control events are strictly permission-gated. The host's `isControlEnabled` state determines if actions are executed.
+
+## 🛠️ Tech Stack
 
 | Layer | Technology |
 |-------|------------|
@@ -40,39 +33,52 @@ This project is being developed as a learning-focused system-level application t
 | Realtime Signaling | WebSocket / Socket.IO |
 | Streaming | WebRTC |
 | Desktop App | Electron |
-| Security | DTLS + SRTP |
+| Control Automation | @jitsi/robotjs |
 
-### 🗂️ Planned Architecture
-```
-Controller App  <─── WebRTC ───>  Host App
-       │                              │
-       └────── Signaling Server ──────┘
-```
+## 🚀 Getting Started
 
-## 🎯 Project Goals
-- Understand WebRTC and real-time media streaming
-- Learn signaling and peer-to-peer networking
-- Handle remote input events securely
-- Build a production-style desktop application
-- Gain hands-on experience with system design
+### Prerequisites
+- Node.js (v18+)
+- npm or yarn
 
-## 🛠️ Current Status
-🚧 **Work in Progress**
+### Installation
 
-Initial focus is on:
-- Setting up signaling server
-- Establishing live screen streaming
-- Building basic desktop UI
+1.  Clone the repository:
+    ```bash
+    git clone https://github.com/yourusername/deskbridge.git
+    cd deskbridge
+    ```
 
-## 📌 Disclaimer
-DeskBridge is a learning and academic project and is not intended to replace commercial remote desktop software.
-The project does not collect user data and prioritizes privacy and security during development.
+2.  Install dependencies:
+    ```bash
+    npm install
+    ```
+
+### Running the Application
+
+1.  Start the backend (Signaling Server):
+    ```bash
+    npm run dev
+    ```
+
+2.  Start the Electron application:
+    ```bash
+    npm run electron:dev
+    ```
+
+## 🎮 Usage Guide
+
+1.  **Start a Session**: Launch the app on two devices.
+2.  **Connect**: Enter the Host's Device ID on the Controller machine.
+3.  **Permissions**:
+    -   **Important**: On macOS, the Host device must grant **Accessibility** permissions to the Electron app in System Settings for remote control to work.
+4.  **Control**:
+    -   The Guest can toggle mouse/keyboard control in the toolbar.
+    -   Host can click the **Lock/Unlock** icon to instantly revoke or grant control access.
+    -   Visual feedback (toasts and disabled buttons) keeps the Controller informed of their permission status.
 
 ## 🤝 Contributions
-This is currently a solo project. Contributions, suggestions, and feedback are welcome in the future.
+This is currently a learning project. Contributions, suggestions, and feedback are welcome!
 
-## Running the code
-
-Run `npm i` to install the dependencies.
-
-Run `npm run dev` to start the development server.
+## 📌 Disclaimer
+DeskBridge is a learning and academic project and is not intended to replace commercial remote desktop software. The project prioritizes privacy and security during development but is provided as-is.

@@ -32,6 +32,17 @@ const handleSocketEvents = (io, socket) => {
         });
         console.log(`User disconnecting: ${socket.userId || socket.id}`);
     });
+
+    // Control Actions (Mouse/Keyboard)
+    socket.on('control-action', ({ roomId, action }) => {
+        // Relay to all others in the room (Host should be in this room)
+        socket.to(roomId).emit('control-action', action);
+    });
+
+    // Permission Sync
+    socket.on('permission-update', ({ roomId, allowed }) => {
+        socket.to(roomId).emit('permission-update', allowed);
+    });
 };
 
 module.exports = { handleSocketEvents };
