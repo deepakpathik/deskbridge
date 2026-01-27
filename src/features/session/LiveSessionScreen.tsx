@@ -228,22 +228,12 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
 
               <div className="relative w-full h-full flex flex-col items-center justify-center gap-6">
                 {/* Only show Start Sharing for Host */}
+                {/* Only show Start Sharing for Host */}
                 {!isCaller ? (
-                  <div className="p-8 rounded-3xl bg-white/5 border-2 border-white/30 backdrop-blur-xl text-center space-y-4 shadow-2xl">
-                    <div className="w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center border border-white/10">
-                      <Cast className="w-10 h-10 text-blue-400" />
-                    </div>
-                    <div>
-                      <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">Start Sharing</h2>
-                      <p className="text-gray-400 mt-2">Share your screen with the connected device</p>
-                    </div>
-                    <button
-                      onClick={handleStartShare}
-                      className="px-8 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold shadow-lg shadow-blue-500/20 hover:scale-105 transition-all"
-                    >
-                      Share Screen
-                    </button>
-                    {remoteDeviceId && <p className="text-xs text-gray-500 pt-2">Connected to: {remoteDeviceId}</p>}
+                  <div className="flex flex-col items-center justify-center gap-4 opacity-50">
+                    <Cast className="w-12 h-12 text-blue-400/50 animate-pulse" />
+                    <p className="text-gray-400 font-medium">Ready to share screen</p>
+                    <p className="text-gray-600 text-sm">Use the toolbar controls to begin</p>
                   </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center gap-4">

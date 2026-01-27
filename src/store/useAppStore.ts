@@ -112,7 +112,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
             const { remoteDeviceId, recentSessions } = get();
 
             // Add to recent sessions
-            if (remoteDeviceId) {
+            if (remoteDeviceId && remoteDeviceId !== get().myDeviceId) {
                 const newSession: RecentSession = { deviceId: remoteDeviceId, timestamp: Date.now() };
                 const updatedSessions = [newSession, ...recentSessions.filter(s => s.deviceId !== remoteDeviceId)].slice(0, 5); // Keep last 5
                 set({ recentSessions: updatedSessions });
@@ -185,7 +185,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
         }
 
         // Add to recent sessions (Host side)
-        if (remoteDeviceId) {
+        if (remoteDeviceId && remoteDeviceId !== myDeviceId) {
             const newSession: RecentSession = { deviceId: remoteDeviceId, timestamp: Date.now() };
             const updatedSessions = [newSession, ...recentSessions.filter(s => s.deviceId !== remoteDeviceId)].slice(0, 5);
             set({ recentSessions: updatedSessions });

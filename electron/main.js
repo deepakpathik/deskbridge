@@ -1,4 +1,8 @@
 const { app, BrowserWindow, ipcMain, systemPreferences, session } = require('electron');
+
+// Disable Autofill features to prevent console errors
+app.commandLine.appendSwitch('disable-features', 'AutofillServerCommunication');
+
 const path = require('path');
 
 let mainWindow;
@@ -13,6 +17,7 @@ const createWindow = () => {
             // nodeIntegration: false, // Default
             // contextIsolation: true, // Default
             sandbox: true, // Sandbox requires explicit permission handling
+            autoplayPolicy: 'no-user-gesture-required',
         },
         backgroundColor: '#000000',
         show: false,
@@ -33,10 +38,14 @@ const createWindow = () => {
 
         desktopCapturer.getSources({ types: ['screen'] }).then((sources) => {
             if (sources && sources.length > 0) {
-                // Auto-select the first screen to unblock the user.
-                // In a production app, we would send these sources to the UI for selection.
-                callback({ video: sources[0], audio: 'loopback' });
-                console.log('Display Media Granted: Auto-selected screen 0');
+                console.log('Available screens:', sources.map(s => `id=${s.id} name=${s.name}`));
+
+                // Try to find the "Entire Screen" or primary display
+                // Often the first one is the main screen, but we should be careful.
+                const source = sources[0];
+
+                callback({ video: source, audio: 'loopback' });
+                console.log(`Display Media Granted: Auto-selected screen id=${source.id} name=${source.name}`);
             } else {
                 console.log('Display Media Denied: No sources found');
                 // Should probably callback with deny? Or just fallback.
@@ -89,6 +98,9 @@ app.on('ready', () => {
                     console.log("Failed to get sources (likely denied):", e);
                     return false;
                 }
+            } else if (mediaType === 'accessibility') {
+                // Request accessibility via isTrustedAccessibilityClient(true) which triggers the prompt
+                return systemPreferences.isTrustedAccessibilityClient(true);
             }
 
             return await systemPreferences.askForMediaAccess(mediaType);
