@@ -63,6 +63,13 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
       setRemoteStream(stream);
     });
 
+    // Subscribe to incoming control data (if we are the host receiving via Data Channel)
+    webrtcService.onControlData((action) => {
+      if (isControlEnabled && window.electronAPI?.performControlAction) {
+        window.electronAPI.performControlAction(action);
+      }
+    });
+
     const api = (window as any).electronAPI;
     if (api?.setFullscreen) {
       api.setFullscreen(true);
@@ -122,6 +129,18 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
   const lastMouseTime = useRef(0);
   const lastScrollTime = useRef(0);
 
+  const sendControl = (action: any) => {
+    if (!remoteDeviceId) return;
+
+    // Try Data Channel first (Low Latency, P2P)
+    const sentViaWebRTC = webrtcService.sendControlData(action);
+
+    // Fallback to Socket.IO if WebRTC Data Channel is not open
+    if (!sentViaWebRTC) {
+      socketService.sendControlAction(remoteDeviceId, action);
+    }
+  };
+
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!mouseControl || !remoteStream || !canControl) return;
 
@@ -134,7 +153,7 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
     const y = (e.clientY - rect.top) / rect.height;
 
     if (remoteDeviceId) {
-      socketService.sendControlAction(remoteDeviceId, { type: 'mousemove', x, y });
+      sendControl({ type: 'mousemove', x, y });
     }
   };
 
@@ -145,7 +164,7 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
     const x = (e.clientX - rect.left) / rect.width;
     const y = (e.clientY - rect.top) / rect.height;
 
-    socketService.sendControlAction(remoteDeviceId, {
+    sendControl({
       type: 'mousedown',
       button: e.button === 0 ? 'left' : 'right',
       x,
@@ -161,7 +180,7 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
     const x = (e.clientX - rect.left) / rect.width;
     const y = (e.clientY - rect.top) / rect.height;
 
-    socketService.sendControlAction(remoteDeviceId, {
+    sendControl({
       type: 'mouseup',
       button: e.button === 0 ? 'left' : 'right',
       x,
@@ -176,7 +195,7 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
     if (now - lastScrollTime.current < 30) return;
     lastScrollTime.current = now;
 
-    socketService.sendControlAction(remoteDeviceId, {
+    sendControl({
       type: 'scroll',
       dx: e.deltaX,
       dy: e.deltaY
@@ -221,7 +240,7 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
         e.preventDefault();
 
         if (remoteDeviceId) {
-          socketService.sendControlAction(remoteDeviceId, {
+          sendControl({
             type: 'keydown',
             key: robotKey,
             // No modifiers needed: we send them as individual key events
@@ -238,7 +257,7 @@ export function LiveSessionScreen({ onDisconnect }: LiveSessionScreenProps) {
         e.preventDefault();
 
         if (remoteDeviceId) {
-          socketService.sendControlAction(remoteDeviceId, {
+          sendControl({
             type: 'keyup',
             key: robotKey,
           });

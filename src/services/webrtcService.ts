@@ -122,10 +122,16 @@ export class WebRTCService {
         this.onControlDataCallback = callback;
     }
 
-    public sendControlData(data: any) {
+    public sendControlData(data: any): boolean {
         if (this.dataChannel && this.dataChannel.readyState === 'open') {
             this.dataChannel.send(JSON.stringify(data));
+            return true;
         }
+        return false;
+    }
+
+    public isDataChannelOpen(): boolean {
+        return this.dataChannel?.readyState === 'open';
     }
 
     public onTrack(callback: (stream: MediaStream) => void) {
@@ -159,7 +165,7 @@ export class WebRTCService {
         if (this.peerConnection) {
             // Only create if it doesn't exist? Or just create a new one?
             // Usually only one side creates it.
-            const channel = this.peerConnection.createDataChannel("control");
+            const channel = this.peerConnection.createDataChannel("control", { ordered: true });
             this.setupDataChannel(channel);
         }
 

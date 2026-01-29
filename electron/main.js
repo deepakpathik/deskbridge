@@ -1,7 +1,7 @@
 const { app, BrowserWindow, ipcMain, systemPreferences, session } = require('electron');
 
 // Disable Autofill features to prevent console errors
-app.commandLine.appendSwitch('disable-features', 'AutofillServerCommunication');
+app.commandLine.appendSwitch('disable-features', 'AutofillServerCommunication,AutofillAddressEnabled,AutofillCreditCardEnabled');
 
 const path = require('path');
 
@@ -141,8 +141,16 @@ app.on('ready', () => {
     ipcMain.handle('remote-control', async (event, action) => {
         try {
             // Lazy load robotjs to avoid startup crashes if not built correctly
-            const robot = require('@jitsi/robotjs');
+            let robot;
+            try {
+                robot = require('@jitsi/robotjs');
+            } catch (e) {
+                console.error("Failed to load @jitsi/robotjs:", e);
+                return false;
+            }
+
             const { width: screenWidth, height: screenHeight } = robot.getScreenSize();
+            // console.log(`Executing control action: ${action.type}`); // Uncomment for verbose logging
 
             switch (action.type) {
                 case 'mousemove':
@@ -158,18 +166,21 @@ app.on('ready', () => {
                         robot.moveMouse(action.x * screenWidth, action.y * screenHeight);
                     }
                     robot.mouseToggle('down', action.button || 'left');
+                    console.log('Mouse Down executed');
                     break;
                 case 'mouseup':
                     if (action.x >= 0 && action.x <= 1 && action.y >= 0 && action.y <= 1) {
                         robot.moveMouse(action.x * screenWidth, action.y * screenHeight);
                     }
                     robot.mouseToggle('up', action.button || 'left');
+                    console.log('Mouse Up executed');
                     break;
                 case 'click':
                     if (action.x >= 0 && action.x <= 1 && action.y >= 0 && action.y <= 1) {
                         robot.moveMouse(action.x * screenWidth, action.y * screenHeight);
                     }
                     robot.mouseClick(action.button || 'left', action.double || false);
+                    console.log('Click executed');
                     break;
                 case 'scroll':
                     // Scale down DOM delta (pixels) to RobotJS (lines/ticks)
@@ -195,6 +206,7 @@ app.on('ready', () => {
                         // Support modifiers if explicitly sent, but usually we send raw key events
                         // robot.keyToggle(key, state, [modifiers])
                         robot.keyToggle(action.key, 'down', action.modifiers || []);
+                        console.log(`Key Down: ${action.key}`);
                     } catch (e) {
                         console.log("Unsupported key down:", action.key);
                     }
@@ -202,6 +214,7 @@ app.on('ready', () => {
                 case 'keyup':
                     try {
                         robot.keyToggle(action.key, 'up', action.modifiers || []);
+                        console.log(`Key Up: ${action.key}`);
                     } catch (e) {
                         console.log("Unsupported key up:", action.key);
                     }

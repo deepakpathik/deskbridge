@@ -1,6 +1,6 @@
 import { io, Socket } from 'socket.io-client';
 
-const SOCKET_URL = 'http://localhost:5001';
+const SOCKET_URL = 'https://mqq39qz8-5001.inc1.devtunnels.ms/';
 
 class SocketService {
     private socket: Socket | null = null;
